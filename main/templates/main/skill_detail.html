@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ skill.name }}</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f7f8fc;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(1100px, 92%);
+            margin: 35px auto;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 18px;
+            text-decoration: none;
+            color: #294a7c;
+            font-weight: bold;
+        }
+
+        .header {
+            background: white;
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px;
+            font-size: 30px;
+        }
+
+        .description {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .price {
+            display: inline-block;
+            margin-top: 12px;
+            background: #eef4ff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .ai-box {
+            margin-top: 20px;
+        }
+
+        .ai-btn {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            background: #673ab7;
+            color: white;
+            padding: 14px;
+            border-radius: 13px;
+            font-weight: bold;
+            font-size: 17px;
+        }
+
+        .ai-btn:hover {
+            background: #56309d;
+        }
+
+        .lessons-title {
+            margin-bottom: 15px;
+        }
+
+        .lessons {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(300px, 1fr)
+            );
+            gap: 20px;
+        }
+
+        .lesson-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+        }
+
+        .lesson-number {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 8px;
+        }
+
+        .lesson-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .lesson-description {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 14px;
+            background: black;
+        }
+
+        .video-box {
+            margin-top: 15px;
+        }
+
+        .no-video {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 12px;
+            color: #777;
+        }
+
+        .empty {
+            background: white;
+            border-radius: 18px;
+            padding: 25px;
+            text-align: center;
+            color: #777;
+        }
+
+        .support {
+            margin-top: 25px;
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .support a {
+            color: #168a37;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <a
+        href="{% url 'skills_page' %}"
+        class="back"
+    >
+        ← العودة للمهارات
+    </a>
+
+    <div class="header">
+
+        <h1>
+            💡 {{ skill.name }}
+        </h1>
+
+        {% if skill.description %}
+
+            <div class="description">
+                {{ skill.description }}
+            </div>
+
+        {% endif %}
+
+        <div class="price">
+            سعر الكورس:
+            {{ skill.course_price }} جنيه
+        </div>
+
+        <div class="ai-box">
+
+            <a
+                href="{% url 'ai_chat' %}?skill={{ skill.id }}"
+                class="ai-btn"
+            >
+                🤖 اسألي المساعد عن مهارة {{ skill.name }}
+            </a>
+
+        </div>
+
+    </div>
+
+    <h2 class="lessons-title">
+        📚 دروس المهارة
+    </h2>
+
+    {% if lessons %}
+
+        <div class="lessons">
+
+            {% for lesson in lessons %}
+
+                <div class="lesson-card">
+
+                    <div class="lesson-number">
+                        الدرس {{ forloop.counter }}
+                    </div>
+
+                    <div class="lesson-title">
+                        {{ lesson.title }}
+                    </div>
+
+                    {% if lesson.description %}
+
+                        <div class="lesson-description">
+                            {{ lesson.description }}
+                        </div>
+
+                    {% endif %}
+
+                    {% if lesson.video %}
+
+                        <div class="video-box">
+
+                            <video
+                                controls
+                                controlsList="nodownload"
+                                playsinline
+                                preload="metadata"
+                            >
+
+                                <source
+                                    src="{{ lesson.video.url }}"
+                                    type="video/mp4"
+                                >
+
+                                المتصفح لا يدعم تشغيل الفيديو.
+
+                            </video>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="no-video">
+                            🎥 لم يتم إضافة فيديو لهذا الدرس حتى الآن.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty">
+
+            📭 لا توجد دروس مضافة لهذه المهارة حاليًا.
+
+            <br><br>
+
+            🤖 ولكن يمكنكِ استخدام المساعد التعليمي
+            من الزر الموجود بالأعلى.
+
+        </div>
+
+    {% endif %}
+
+    <div class="support">
+
+        تحتاجين مساعدة؟
+
+        <br>
+
+        <a
+            href="{{ support_whatsapp }}"
+            target="_blank"
+        >
+            💬 تواصلي مع المدرسة على واتساب
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

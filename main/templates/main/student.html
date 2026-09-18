@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        إنشاء حساب طالب
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #f4f8ff;
+            color: #243f6b;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: auto;
+        }
+
+        .box {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 18px;
+        }
+
+        .skills-box {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .skill-card {
+            background: #f7f9fd;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .skill-card label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .skill-card input {
+            width: auto;
+            margin: 0;
+        }
+
+        .skill-info {
+            margin-top: 8px;
+            color: #666;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .error {
+            background: #fff0f0;
+            color: #b02a37;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .field-error {
+            color: #b02a37;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            width: 100%;
+            border: none;
+            background: #3475df;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #3475df;
+            text-decoration: none;
+        }
+
+        .whatsapp {
+            display: block;
+            text-align: center;
+            background: #25d366;
+            color: white;
+            padding: 13px;
+            border-radius: 12px;
+            text-decoration: none;
+            margin-top: 15px;
+        }
+
+        .success {
+            background: #eaf9ee;
+            color: #218838;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .empty-box {
+            background: #f7f9fd;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            color: #777;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="box">
+
+        <h1>
+            👨‍🎓 إنشاء حساب طالب
+        </h1>
+
+        <p>
+            املئي بيانات الطالب ثم اختاري المهارات التي يرغب فيها.
+        </p>
+
+    </div>
+
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div class="success">
+                ✅ {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+    {% endif %}
+
+
+    {% if form.non_field_errors %}
+
+        <div class="error">
+
+            {% for error in form.non_field_errors %}
+
+                {{ error }}
+
+                <br>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+    >
+
+        {% csrf_token %}
+
+
+        <!-- ================================= -->
+        <!-- بيانات الطالب -->
+        <!-- ================================= -->
+
+        <div class="box">
+
+            <label>
+                اسم الطالب الثلاثي
+            </label>
+
+            <input
+                type="text"
+                name="student_name"
+                value="{{ form.student_name.value|default:'' }}"
+                placeholder="اكتب الاسم الثلاثي"
+                required
+            >
+
+            {% for error in form.student_name.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- الصف -->
+
+            <label>
+                الصف الدراسي
+            </label>
+
+            <select
+                name="grade"
+                required
+            >
+
+                <option value="">
+                    اختر الصف
+                </option>
+
+
+                {% for grade in active_grades %}
+
+                    <option
+                        value="{{ grade.grade }}"
+                        {% if form.grade.value == grade.grade %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ grade.grade }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+            {% for error in form.grade.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- نوع التعليم -->
+
+            <label>
+                نوع التعليم
+            </label>
+
+            <select
+                name="school_type"
+                required
+            >
+
+                <option value="">
+                    اختر نوع التعليم
+                </option>
+
+                <option
+                    value="عربي"
+                    {% if form.school_type.value == "عربي" %}
+                        selected
+                    {% endif %}
+                >
+
+                    عربي
+
+                </option>
+
+                <option
+                    value="لغات"
+                    {% if form.school_type.value == "لغات" %}
+                        selected
+                    {% endif %}
+                >
+
+                    لغات
+
+                </option>
+
+            </select>
+
+            {% for error in form.school_type.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- رقم الطالب -->
+
+            <label>
+                رقم تليفون الطالب
+            </label>
+
+            <input
+                type="tel"
+                name="student_phone"
+                value="{{ form.student_phone.value|default:'' }}"
+                placeholder="اكتب رقم الهاتف"
+                required
+            >
+
+            {% for error in form.student_phone.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- رقم ولي الأمر -->
+
+            <label>
+                رقم تليفون ولي الأمر
+            </label>
+
+            <input
+                type="tel"
+                name="parent_phone"
+                value="{{ form.parent_phone.value|default:'' }}"
+                placeholder="اكتب رقم الهاتف"
+                required
+            >
+
+            {% for error in form.parent_phone.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- كلمة المرور -->
+
+            <label>
+                كلمة المرور
+            </label>
+
+            <input
+                type="password"
+                name="password"
+                minlength="6"
+                required
+            >
+
+
+            <!-- تأكيد كلمة المرور -->
+
+            <label>
+                تأكيد كلمة المرور
+            </label>
+
+            <input
+                type="password"
+                name="confirmPassword"
+                minlength="6"
+                required
+            >
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- المهارات -->
+        <!-- ================================= -->
+
+        <div class="box">
+
+            <h2>
+                💻 المهارات
+            </h2>
+
+            <p>
+                هل تريدين إضافة مهارات مع المنهج؟
+            </p>
+
+
+            <select
+                id="skillsChoice"
+                onchange="showSkills()"
+            >
+
+                <option value="no">
+                    لا
+                </option>
+
+                <option value="yes">
+                    نعم
+                </option>
+
+            </select>
+
+
+            <div
+                class="skills-box"
+                id="skillsBox"
+            >
+
+                {% for skill in skills %}
+
+                    <div class="skill-card">
+
+                        <label>
+
+                            <input
+                                type="checkbox"
+                                name="initial_skills"
+                                value="{{ skill.pk }}"
+                            >
+
+                            {{ skill.name }}
+
+                        </label>
+
+
+                        <div class="skill-info">
+
+                            سعر الكورس كامل:
+
+                            <strong>
+                                {{ skill.course_price }}
+                                جنيه
+                            </strong>
+
+
+                            {% with prerequisites=skill.prerequisites.all %}
+
+                                {% if prerequisites %}
+
+                                    <br>
+
+                                    المتطلبات:
+
+                                    {% for prerequisite in prerequisites %}
+
+                                        {{ prerequisite.name }}
+
+                                        {% if not forloop.last %}
+                                            +
+                                        {% endif %}
+
+                                    {% endfor %}
+
+                                {% endif %}
+
+                            {% endwith %}
+
+                        </div>
+
+                    </div>
+
+                {% empty %}
+
+                    <div class="empty-box">
+
+                        لا توجد مهارات متاحة حاليًا.
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- إنشاء الحساب -->
+        <!-- ================================= -->
+
+        <div class="box">
+
+            <button type="submit">
+
+                إنشاء الحساب ✅
+
+            </button>
+
+        </div>
+
+    </form>
+
+
+    <!-- واتساب -->
+
+    <a
+        class="whatsapp"
+        href="{{ support_whatsapp }}"
+        target="_blank"
+    >
+
+        💬 التواصل مع المنصة عبر واتساب
+
+    </a>
+
+
+    <!-- رجوع -->
+
+    <a
+        class="back"
+        href="/"
+    >
+
+        ← العودة للصفحة الرئيسية
+
+    </a>
+
+</div>
+
+
+<script>
+
+function showSkills() {
+
+    const choice =
+        document.getElementById(
+            "skillsChoice"
+        );
+
+    const box =
+        document.getElementById(
+            "skillsBox"
+        );
+
+
+    if (choice.value === "yes") {
+
+        box.style.display = "block";
+
+    } else {
+
+        box.style.display = "none";
+
+
+        document
+            .querySelectorAll(
+                'input[name="initial_skills"]'
+            )
+            .forEach(function(input) {
+
+                input.checked = false;
+
+            });
+
+    }
+
+}
+
+</script>
+
+
+</body>
+
+</html>

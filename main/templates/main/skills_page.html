@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>المهارات</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f7f8fc;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(1000px, 92%);
+            margin: 40px auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 22px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin-top: 0;
+        }
+
+        .header p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(250px, 1fr)
+            );
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .open-btn {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            background: #294a7c;
+            color: white;
+            padding: 13px;
+            border-radius: 12px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .open-btn:hover {
+            background: #1f3962;
+        }
+
+        .add-card {
+            border: 2px dashed #294a7c;
+        }
+
+        .add-card .open-btn {
+            background: #eef4ff;
+            color: #294a7c;
+        }
+
+        .empty {
+            background: white;
+            border-radius: 18px;
+            padding: 25px;
+            text-align: center;
+            color: #777;
+        }
+
+        .support {
+            margin-top: 25px;
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .support a {
+            color: #168a37;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .status {
+            display: inline-block;
+            background: #e7f8ed;
+            color: #218838;
+            padding: 6px 11px;
+            border-radius: 15px;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #294a7c;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <a
+        href="{% url 'student_dashboard' %}"
+        class="back"
+    >
+        ← العودة للرئيسية
+    </a>
+
+    <div class="header">
+
+        <h1>
+            💡 المهارات
+        </h1>
+
+        <p>
+            هنا ستجدين المهارات التي تم تفعيلها لحسابك.
+        </p>
+
+    </div>
+
+    {% if skills %}
+
+        <div class="cards">
+
+            {% for subscription in skills %}
+
+                <div class="card">
+
+                    <h2>
+                        💡 {{ subscription.skill.name }}
+                    </h2>
+
+                    {% if subscription.skill.description %}
+
+                        <p>
+                            {{ subscription.skill.description }}
+                        </p>
+
+                    {% endif %}
+
+                    <span class="status">
+                        ✅ مفعلة
+                    </span>
+
+                    <a
+                        href="{% url 'skill_detail' subscription.skill.id %}"
+                        class="open-btn"
+                    >
+                        فتح المهارة →
+                    </a>
+
+                </div>
+
+            {% endfor %}
+
+
+            <div class="card add-card">
+
+                <h2>
+                    ➕ إضافة مهارة
+                </h2>
+
+                <p>
+                    يمكنك تقديم طلب لإضافة مهارة أخرى
+                    وسيتم تفعيلها بعد موافقة المدرسة.
+                </p>
+
+                {% if skills_open %}
+
+                    <a
+                        href="{% url 'add_content' %}"
+                        class="open-btn"
+                    >
+                        إضافة مهارة
+                    </a>
+
+                {% else %}
+
+                    <p>
+                        المهارات غير متاحة حاليًا.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="empty">
+
+            📭 لا توجد مهارات مفعلة حاليًا.
+
+            {% if skills_open %}
+
+                <br><br>
+
+                <a
+                    href="{% url 'add_content' %}"
+                    class="open-btn"
+                >
+                    ➕ إضافة مهارة
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+    <div class="support">
+
+        تحتاجين مساعدة؟
+
+        <br><br>
+
+        <a
+            href="{{ support_whatsapp }}"
+            target="_blank"
+        >
+            💬 التواصل مع المدرسة على واتساب
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

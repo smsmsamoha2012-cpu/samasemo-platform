@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {{ subject }} - منصتي التعليمية
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #f4f8ff;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .header,
+        .content,
+        .support-box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        }
+
+        .header h1 {
+            margin-top: 0;
+        }
+
+        .info {
+            color: #666;
+            line-height: 2;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 10px;
+            color: #3475df;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .remaining-box {
+            background: #eef7ff;
+            padding: 18px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .locked-message {
+            background: #fff0f0;
+            color: #b02a37;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .locked-message a {
+            display: inline-block;
+            margin-top: 15px;
+            background: #3475df;
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+        }
+
+        /* ============================= */
+        /* أقسام المادة */
+        /* ============================= */
+
+        .menu {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(170px, 1fr)
+            );
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .menu a {
+            display: block;
+            background: #f7f9fd;
+            color: #243f6b;
+            text-decoration: none;
+            padding: 18px 12px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #e1e7f0;
+        }
+
+        .menu a.active {
+            background: #243f6b;
+            color: white;
+        }
+
+        /* ============================= */
+        /* مساعد المادة */
+        /* ============================= */
+
+        .ai-box {
+            background: white;
+            border-radius: 18px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+
+            box-shadow: 0 6px 20px rgba(0,0,0,.05);
+
+            border: 1px solid #e5e9f1;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 15px;
+        }
+
+        .ai-text {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ai-text strong {
+            color: #243f6b;
+            font-size: 16px;
+        }
+
+        .ai-text span {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .ai-main-button {
+            display: inline-block;
+
+            background: #673ab7;
+            color: white;
+
+            text-decoration: none;
+
+            padding: 11px 18px;
+
+            border-radius: 11px;
+
+            font-size: 14px;
+            font-weight: bold;
+
+            white-space: nowrap;
+
+            transition: .2s;
+        }
+
+        .ai-main-button:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+        }
+
+        /* ============================= */
+        /* عناوين الأقسام */
+        /* ============================= */
+
+        .section-title {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        /* ============================= */
+        /* الكروت */
+        /* ============================= */
+
+        .lesson-card,
+        .homework-card,
+        .exam-card,
+        .result-card {
+            background: #f7f9fd;
+            border: 1px solid #e1e7f0;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .lesson-card h3,
+        .homework-card h3,
+        .exam-card h3,
+        .result-card h3 {
+            margin-top: 0;
+        }
+
+        .description {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        /* ============================= */
+        /* الفيديو */
+        /* ============================= */
+
+        video {
+            width: 100%;
+            max-width: 900px;
+            border-radius: 15px;
+            margin-top: 15px;
+            background: black;
+        }
+
+        /* ============================= */
+        /* أنواع الواجبات */
+        /* ============================= */
+
+        .badge {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .electronic-badge {
+            background: #e7f0ff;
+            color: #2457a6;
+        }
+
+        .paper-badge {
+            background: #fff1dc;
+            color: #9a6100;
+        }
+
+        /* ============================= */
+        /* الأزرار */
+        /* ============================= */
+
+        .open-button,
+        .download-button {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 11px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .open-button {
+            background: #243f6b;
+            color: white;
+        }
+
+        .download-button {
+            background: #3475df;
+            color: white;
+        }
+
+        /* ============================= */
+        /* رفع الواجب */
+        /* ============================= */
+
+        .upload-form {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid #ddd;
+        }
+
+        .upload-form label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .upload-form input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .upload-button {
+            margin-top: 12px;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            background: #243f6b;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* ============================= */
+        /* الرسائل */
+        /* ============================= */
+
+        .success {
+            background: #e7f8ed;
+            color: #218838;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .error {
+            background: #fff0f0;
+            color: #b02a37;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .empty {
+            text-align: center;
+            background: #f7f9fd;
+            color: #777;
+            padding: 28px;
+            border-radius: 15px;
+            line-height: 2;
+        }
+
+        /* ============================= */
+        /* الحساب */
+        /* ============================= */
+
+        .account-box {
+            background: #f7f9fd;
+            padding: 20px;
+            border-radius: 15px;
+            line-height: 2;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* ============================= */
+        /* الدعم */
+        /* ============================= */
+
+        .support-box {
+            text-align: center;
+        }
+
+        .whatsapp-button {
+            display: inline-block;
+            background: #25d366;
+            color: white;
+            padding: 13px 25px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .logout {
+            display: block;
+            text-align: center;
+            color: #c94b4b;
+            text-decoration: none;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        /* ============================= */
+        /* الموبايل */
+        /* ============================= */
+
+        @media (max-width: 650px) {
+
+            body {
+                padding: 15px;
+            }
+
+            .header,
+            .content,
+            .support-box {
+                padding: 18px;
+            }
+
+            .ai-box {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .ai-main-button {
+                text-align: center;
+                width: 100%;
+            }
+
+            .menu {
+                grid-template-columns: 1fr 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- =========================================== -->
+    <!-- بيانات المادة -->
+    <!-- =========================================== -->
+
+    <div class="header">
+
+        <h1>
+            📚 {{ subject }}
+        </h1>
+
+        <div class="info">
+
+            <p>
+                الطالب:
+                <strong>
+                    {{ student.student_name }}
+                </strong>
+            </p>
+
+            <p>
+                الصف:
+                <strong>
+                    {{ student.grade }}
+                </strong>
+            </p>
+
+            <p>
+                نوع التعليم:
+                <strong>
+                    {{ student.school_type }}
+                </strong>
+            </p>
+
+        </div>
+
+        <a
+            class="back"
+            href="{% url 'curriculum_page' %}"
+        >
+            ← العودة للمنهج
+        </a>
+
+    </div>
+
+
+    {% if subscription %}
+
+        {% if locked_subject %}
+
+            <div class="content">
+
+                <div class="locked-message">
+
+                    🔒 تم استهلاك حصص الاشتراك الشهري لهذه المادة.
+
+                    <br>
+
+                    لا توجد حصص مشاهدة متبقية حاليًا.
+
+                    <br>
+
+                    يمكنك العودة لاحقًا أو طلب إضافة محتوى جديد.
+
+                    <br>
+
+                    <a href="{% url 'add_content' %}">
+                        ➕ إضافة محتوى
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% else %}
+
+
+            <!-- ================================= -->
+            <!-- معلومات الاشتراك -->
+            <!-- ================================= -->
+
+            <div class="remaining-box">
+
+                {% if subscription.plan_type == "full_term" %}
+
+                    📚 اشتراك الترم كامل
+
+                    <br>
+
+                    جميع حصص المادة متاحة.
+
+                {% else %}
+
+                    🎥 المتبقي:
+
+                    <strong>
+                        {{ remaining_lessons }}
+                    </strong>
+
+                    حصص.
+
+                    <br>
+
+                    الاشتراك الشهري يسمح بأربع حصص.
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- رسائل رفع الواجب -->
+            <!-- ================================= -->
+
+            {% if upload_message %}
+
+                <div class="success">
+                    ✅ {{ upload_message }}
+                </div>
+
+            {% endif %}
+
+
+            {% if upload_error %}
+
+                <div class="error">
+                    ❌ {{ upload_error }}
+                </div>
+
+            {% endif %}
+
+
+            <!-- ================================= -->
+            <!-- الأقسام -->
+            <!-- ================================= -->
+
+            <div class="menu">
+
+                <a
+                    href="?section=lessons"
+                    class="{% if section == 'lessons' %}active{% endif %}"
+                >
+                    🎥 الحصص
+                </a>
+
+                <a
+                    href="?section=homework"
+                    class="{% if section == 'homework' %}active{% endif %}"
+                >
+                    📝 الواجبات
+                </a>
+
+                <a
+                    href="?section=exams"
+                    class="{% if section == 'exams' %}active{% endif %}"
+                >
+                    📋 الامتحانات
+                </a>
+
+                <a
+                    href="?section=homework_results"
+                    class="{% if section == 'homework_results' %}active{% endif %}"
+                >
+                    ✅ نتائج الواجبات
+                </a>
+
+                <a
+                    href="?section=exam_results"
+                    class="{% if section == 'exam_results' %}active{% endif %}"
+                >
+                    📊 نتائج الامتحانات
+                </a>
+
+                <a
+                    href="?section=account"
+                    class="{% if section == 'account' %}active{% endif %}"
+                >
+                    👤 حسابي
+                </a>
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- مساعد المادة -->
+            <!-- ================================= -->
+
+            <div class="ai-box">
+
+                <div class="ai-text">
+
+                    <strong>
+                        🤖 مساعد {{ subject }}
+                    </strong>
+
+                    <span>
+                        اسألي عن أي حاجة مش واضحة في المادة
+                    </span>
+
+                </div>
+
+                <a
+                    class="ai-main-button"
+                    href="{% url 'ai_chat' %}?subject={{ subject|urlencode }}"
+                >
+                    اسألي المساعد
+                </a>
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- المحتوى -->
+            <!-- ================================= -->
+
+            <div class="content">
+
+
+                <!-- ================================= -->
+                <!-- الحصص -->
+                <!-- ================================= -->
+
+                {% if section == "lessons" %}
+
+                    <h2 class="section-title">
+                        🎥 حصص {{ subject }}
+                    </h2>
+
+
+                    {% for lesson in lessons %}
+
+                        <div class="lesson-card">
+
+                            <h3>
+                                {{ lesson.title }}
+                            </h3>
+
+                            {% if lesson.description %}
+
+                                <div class="description">
+                                    {{ lesson.description }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if lesson.video %}
+
+                                {% if subscription.max_lessons == 0 or remaining_lessons > 0 %}
+
+                                    <video
+                                        controls
+                                        controlsList="nodownload"
+                                        preload="metadata"
+                                    >
+
+                                        <source
+                                            src="{% url 'protected_lesson_video' lesson.id %}"
+                                            type="video/mp4"
+                                        >
+
+                                        المتصفح لا يدعم تشغيل الفيديو.
+
+                                    </video>
+
+                                {% else %}
+
+                                    <div class="locked-message">
+
+                                        🔒 انتهت حصص الاشتراك الشهري.
+
+                                    </div>
+
+                                {% endif %}
+
+                            {% else %}
+
+                                <div class="empty">
+
+                                    📭 لا يوجد فيديو لهذه الحصة حاليًا.
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="empty">
+
+                            📭 لا توجد حصص مضافة حاليًا.
+
+                            <br>
+
+                            سيتم إضافة الحصص من المدرسة قريبًا.
+
+                        </div>
+
+                    {% endfor %}
+
+
+                <!-- ================================= -->
+                <!-- الواجبات -->
+                <!-- ================================= -->
+
+                {% elif section == "homework" %}
+
+                    <h2 class="section-title">
+                        📝 واجبات {{ subject }}
+                    </h2>
+
+
+                    {% for homework in homeworks %}
+
+                        <div class="homework-card">
+
+                            <h3>
+                                {{ homework.title }}
+                            </h3>
+
+                            {% if homework.description %}
+
+                                <div class="description">
+                                    {{ homework.description }}
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if homework.homework_type == "electronic" %}
+
+                                <span class="badge electronic-badge">
+                                    🖥️ واجب إلكتروني
+                                </span>
+
+                                <p>
+                                    إجمالي الدرجات:
+                                    <strong>
+                                        {{ homework.total_marks }}
+                                    </strong>
+                                </p>
+
+                                <a
+                                    class="open-button"
+                                    href="{% url 'electronic_homework' homework.id %}"
+                                >
+                                    ▶️ ابدأ الواجب
+                                </a>
+
+
+                            {% else %}
+
+                                <span class="badge paper-badge">
+                                    📄 واجب ورقي
+                                </span>
+
+                                <p>
+                                    هذا الواجب يتم حله على الورق.
+                                </p>
+
+
+                                {% if homework.file %}
+
+                                    <a
+                                        class="download-button"
+                                        href="{{ homework.file.url }}"
+                                        target="_blank"
+                                    >
+                                        📄 فتح / تحميل ورقة الواجب
+                                    </a>
+
+                                {% else %}
+
+                                    <p>
+                                        📭 لم يتم رفع ورقة الواجب بعد.
+                                    </p>
+
+                                {% endif %}
+
+
+                                <div class="upload-form">
+
+                                    <form
+                                        method="POST"
+                                        enctype="multipart/form-data"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="action"
+                                            value="upload_homework"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="homework_id"
+                                            value="{{ homework.id }}"
+                                        >
+
+                                        <label>
+                                            📤 ارفعي حل الواجب
+                                        </label>
+
+                                        <input
+                                            type="file"
+                                            name="uploaded_file"
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            required
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="upload-button"
+                                        >
+                                            📤 إرسال الحل
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="empty">
+
+                            📭 لا توجد واجبات مضافة حاليًا.
+
+                        </div>
+
+                    {% endfor %}
+
+
+                <!-- ================================= -->
+                <!-- الامتحانات -->
+                <!-- ================================= -->
+
+                {% elif section == "exams" %}
+
+                    <h2 class="section-title">
+                        📋 امتحانات {{ subject }}
+                    </h2>
+
+
+                    {% for exam in exams %}
+
+                        <div class="exam-card">
+
+                            <h3>
+                                {{ exam.title }}
+                            </h3>
+
+                            {% if exam.description %}
+
+                                <div class="description">
+                                    {{ exam.description }}
+                                </div>
+
+                            {% endif %}
+
+                            <p>
+                                إجمالي الدرجات:
+                                <strong>
+                                    {{ exam.total_marks }}
+                                </strong>
+                            </p>
+
+                            {% if exam.file %}
+
+                                <a
+                                    class="download-button"
+                                    href="{{ exam.file.url }}"
+                                    target="_blank"
+                                >
+                                    📄 فتح / تحميل الامتحان
+                                </a>
+
+                            {% else %}
+
+                                <p>
+                                    📭 لم يتم رفع الامتحان حاليًا.
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="empty">
+
+                            📭 لا توجد امتحانات مضافة حاليًا.
+
+                        </div>
+
+                    {% endfor %}
+
+
+                <!-- ================================= -->
+                <!-- نتائج الواجبات -->
+                <!-- ================================= -->
+
+                {% elif section == "homework_results" %}
+
+                    <h2 class="section-title">
+                        ✅ نتائج الواجبات
+                    </h2>
+
+
+                    {% for result in homework_results %}
+
+                        <div class="result-card">
+
+                            <h3>
+                                📝 {{ result.homework.title }}
+                            </h3>
+
+                            <div class="score">
+
+                                {{ result.score }}
+
+                                من
+
+                                {{ result.max_score }}
+
+                            </div>
+
+                            {% if result.feedback %}
+
+                                <p>
+                                    💬 {{ result.feedback }}
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="empty">
+
+                            📭 لا توجد نتائج واجبات حاليًا.
+
+                            <br>
+
+                            ستظهر النتيجة بعد التصحيح.
+
+                        </div>
+
+                    {% endfor %}
+
+
+                <!-- ================================= -->
+                <!-- نتائج الامتحانات -->
+                <!-- ================================= -->
+
+                {% elif section == "exam_results" %}
+
+                    <h2 class="section-title">
+                        📊 نتائج الامتحانات
+                    </h2>
+
+
+                    {% for result in exam_results %}
+
+                        <div class="result-card">
+
+                            <h3>
+                                📋 {{ result.exam.title }}
+                            </h3>
+
+                            <div class="score">
+
+                                {{ result.score }}
+
+                                من
+
+                                {{ result.exam.total_marks }}
+
+                            </div>
+
+                            {% if result.feedback %}
+
+                                <p>
+                                    💬 {{ result.feedback }}
+
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% empty %}
+
+                        <div class="empty">
+
+                            📭 لا توجد نتائج امتحانات حاليًا.
+
+                        </div>
+
+                    {% endfor %}
+
+
+                <!-- ================================= -->
+                <!-- حسابي -->
+                <!-- ================================= -->
+
+                {% elif section == "account" %}
+
+                    <h2 class="section-title">
+                        👤 حسابي
+                    </h2>
+
+                    <div class="account-box">
+
+                        <p>
+                            اسم الطالب:
+                            <strong>
+                                {{ student.student_name }}
+                            </strong>
+                        </p>
+
+                        <p>
+                            الصف:
+                            <strong>
+                                {{ student.grade }}
+                            </strong>
+                        </p>
+
+                        <p>
+                            نوع التعليم:
+                            <strong>
+                                {{ student.school_type }}
+                            </strong>
+                        </p>
+
+                        <p>
+                            المادة:
+                            <strong>
+                                {{ subject }}
+                            </strong>
+                        </p>
+
+                        {% if subscription.plan_type == "full_term" %}
+
+                            <p>
+                                الاشتراك:
+                                <strong>
+                                    الترم كامل
+                                </strong>
+                            </p>
+
+                            <p>
+                                الحصص:
+                                <strong>
+                                    مفتوحة
+                                </strong>
+                            </p>
+
+                        {% else %}
+
+                            <p>
+                                الاشتراك:
+                                <strong>
+                                    شهري
+                                </strong>
+                            </p>
+
+                            <p>
+                                المتبقي:
+                                <strong>
+                                    {{ remaining_lessons }}
+                                    حصص
+                                </strong>
+                            </p>
+
+                        {% endif %}
+
+                    </div>
+
+
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+
+    {% else %}
+
+        <div class="content">
+
+            <div class="locked-message">
+
+                🔒 هذه المادة غير مفعلة لحسابك.
+
+                <br>
+
+                لا يمكنك مشاهدة محتوى المادة.
+
+                <br>
+
+                <a href="{% url 'add_content' %}">
+                    ➕ طلب إضافة المادة
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- ================================= -->
+    <!-- الدعم -->
+    <!-- ================================= -->
+
+    <div class="support-box">
+
+        <h3>
+            💬 تحتاجين مساعدة؟
+        </h3>
+
+        <a
+            class="whatsapp-button"
+            href="{{ support_whatsapp }}"
+            target="_blank"
+        >
+            📱 تواصلي معنا على واتساب
+        </a>
+
+    </div>
+
+
+    <!-- تسجيل الخروج -->
+
+    <a
+        class="logout"
+        href="{% url 'student_logout' %}"
+    >
+        تسجيل الخروج
+    </a>
+
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>تحديد بيانات الدراسة</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f7f8fc;
+            font-family: Arial, Tahoma, sans-serif;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(800px, 92%);
+            margin: 45px auto;
+        }
+
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .subtitle {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .group {
+            margin-bottom: 25px;
+        }
+
+        .group-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(200px, 1fr)
+            );
+            gap: 12px;
+        }
+
+        .option {
+            display: block;
+            border: 2px solid #e2e6ee;
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .option:hover {
+            border-color: #294a7c;
+            transform: translateY(-2px);
+        }
+
+        .option input {
+            margin-left: 8px;
+        }
+
+        .available {
+            display: inline-block;
+            margin-right: 7px;
+            color: #218838;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 14px;
+            background: #294a7c;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1f3962;
+        }
+
+        .error {
+            background: #ffecec;
+            color: #a32626;
+            padding: 13px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            line-height: 1.8;
+        }
+
+        .price-box {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(200px, 1fr)
+            );
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .price-card {
+            background: #eef4ff;
+            border-radius: 15px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .price-card strong {
+            display: block;
+            font-size: 21px;
+            margin-top: 7px;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #294a7c;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <a
+        href="{% url 'old_student' %}"
+        class="back"
+    >
+        ← العودة
+    </a>
+
+    <div class="box">
+
+        <h1>
+            📚 تحديد بيانات الدراسة
+        </h1>
+
+        <div class="subtitle">
+
+            أهلاً بيكي من جديد ❤️
+
+            <br>
+
+            اختاري الصف ونوع التعليم علشان نعرضلك
+            الاشتراكات المناسبة.
+
+        </div>
+
+        {% if error %}
+
+            <div class="error">
+                {{ error }}
+            </div>
+
+        {% endif %}
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="group">
+
+                <div class="group-title">
+                    🎓 اختاري الصف المتاح
+                </div>
+
+                <div class="options">
+
+                    {% for grade in grades %}
+
+                        <label class="option">
+
+                            <input
+                                type="radio"
+                                name="grade"
+                                value="{{ grade.grade }}"
+                                {% if selected_grade == grade.grade %}
+                                    checked
+                                {% endif %}
+                                required
+                            >
+
+                            {{ grade.get_grade_display }}
+
+                            <span class="available">
+                                ✅ متاح
+                            </span>
+
+                        </label>
+
+                    {% empty %}
+
+                        <div class="error">
+                            لا توجد صفوف متاحة حاليًا.
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+            <div class="group">
+
+                <div class="group-title">
+                    🏫 نوع الدراسة
+                </div>
+
+                <div class="options">
+
+                    <label class="option">
+
+                        <input
+                            type="radio"
+                            name="school_type"
+                            value="عربي"
+                            {% if selected_school_type == "عربي" %}
+                                checked
+                            {% endif %}
+                            required
+                        >
+
+                        عربي
+
+                    </label>
+
+                    <label class="option">
+
+                        <input
+                            type="radio"
+                            name="school_type"
+                            value="لغات"
+                            {% if selected_school_type == "لغات" %}
+                                checked
+                            {% endif %}
+                        >
+
+                        لغات
+
+                    </label>
+
+                </div>
+
+            </div>
+
+            {% if selected_grade %}
+
+                <div class="price-box">
+
+                    <div class="price-card">
+
+                        الاشتراك الشهري للمادة
+
+                        <strong>
+                            {{ monthly_price }} جنيه
+                        </strong>
+
+                    </div>
+
+                    <div class="price-card">
+
+                        اشتراك الترم الكامل
+
+                        <strong>
+                            {{ full_term_price }} جنيه
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+            <br>
+
+            <button type="submit">
+                متابعة الاشتراك →
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

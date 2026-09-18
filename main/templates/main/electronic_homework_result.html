@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>نتيجة الواجب</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f7f8fc;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(800px, 92%);
+            margin: 45px auto;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            margin: 10px 0;
+        }
+
+        .score {
+            font-size: 42px;
+            font-weight: bold;
+            margin: 25px 0;
+        }
+
+        .details {
+            background: #f3f6fb;
+            border-radius: 16px;
+            padding: 18px;
+            margin: 20px 0;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dfe4ec;
+        }
+
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px;
+            border-radius: 14px;
+            text-decoration: none;
+            font-weight: bold;
+            background: #294a7c;
+            color: white;
+        }
+
+        .btn.secondary {
+            background: #eef2f8;
+            color: #294a7c;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="result-card">
+
+        <div class="icon">
+            ✅
+        </div>
+
+        <h1>
+            تم تصحيح الواجب
+        </h1>
+
+        <h2>
+            {{ homework.title }}
+        </h2>
+
+        <div class="score">
+            {{ score }} / {{ total }}
+        </div>
+
+        <div class="details">
+
+            <div class="row">
+                <span>الإجابات الصحيحة</span>
+                <strong>{{ correct }}</strong>
+            </div>
+
+            <div class="row">
+                <span>عدد الأسئلة</span>
+                <strong>{{ total }}</strong>
+            </div>
+
+            <div class="row">
+                <span>النتيجة</span>
+                <strong>{{ percentage }}%</strong>
+            </div>
+
+        </div>
+
+        <div class="buttons">
+
+            <a
+                href="{% url 'subject_lessons' subject %}?section=homework"
+                class="btn"
+            >
+                ← العودة للواجبات
+            </a>
+
+            <a
+                href="{% url 'student_dashboard' %}"
+                class="btn secondary"
+            >
+                🏠 الرئيسية
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

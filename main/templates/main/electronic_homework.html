@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        الواجب الإلكتروني
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f7f8fc;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(900px, 92%);
+            margin: 35px auto;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 18px;
+            text-decoration: none;
+            color: #294a7c;
+            font-weight: bold;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 22px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin-top: 0;
+        }
+
+        .header p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .question {
+            background: white;
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        .question-number {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .question-text {
+            font-size: 19px;
+            font-weight: bold;
+            line-height: 1.8;
+            margin-bottom: 18px;
+        }
+
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .choice {
+            border: 2px solid #e3e7ef;
+            border-radius: 12px;
+            padding: 13px 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .choice:hover {
+            border-color: #294a7c;
+        }
+
+        .choice input {
+            margin-left: 10px;
+        }
+
+        .choice-text {
+            display: inline;
+        }
+
+        .submit-btn {
+            width: 100%;
+            border: none;
+            background: #294a7c;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 16px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background: #1f3962;
+        }
+
+        .empty {
+            background: white;
+            padding: 25px;
+            border-radius: 18px;
+            text-align: center;
+            color: #777;
+        }
+
+        .warning {
+            background: #fff7e8;
+            border-right: 5px solid #e0a13a;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <a
+        href="{% url 'subject_lessons' subject %}"
+        class="back"
+    >
+        ← العودة للمادة
+    </a>
+
+    <div class="header">
+
+        <h1>
+            📝 {{ homework.title }}
+        </h1>
+
+        {% if homework.description %}
+
+            <p>
+                {{ homework.description }}
+            </p>
+
+        {% endif %}
+
+        <div class="warning">
+
+            ✏️ اختاري إجابة كل سؤال ثم اضغطي
+            <strong>إرسال الإجابات</strong>.
+
+        </div>
+
+    </div>
+
+    {% if questions %}
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            {% for question in questions %}
+
+                <div class="question">
+
+                    <div class="question-number">
+                        السؤال {{ forloop.counter }}
+                    </div>
+
+                    <div class="question-text">
+                        {{ question.text }}
+                    </div>
+
+                    <div class="choices">
+
+                        {% if question.choice_a %}
+                            <label class="choice">
+
+                                <input
+                                    type="radio"
+                                    name="question_{{ question.id }}"
+                                    value="A"
+                                    required
+                                >
+
+                                <span class="choice-text">
+                                    {{ question.choice_a }}
+                                </span>
+
+                            </label>
+                        {% endif %}
+
+
+                        {% if question.choice_b %}
+                            <label class="choice">
+
+                                <input
+                                    type="radio"
+                                    name="question_{{ question.id }}"
+                                    value="B"
+                                    required
+                                >
+
+                                <span class="choice-text">
+                                    {{ question.choice_b }}
+                                </span>
+
+                            </label>
+                        {% endif %}
+
+
+                        {% if question.choice_c %}
+                            <label class="choice">
+
+                                <input
+                                    type="radio"
+                                    name="question_{{ question.id }}"
+                                    value="C"
+                                    required
+                                >
+
+                                <span class="choice-text">
+                                    {{ question.choice_c }}
+                                </span>
+
+                            </label>
+                        {% endif %}
+
+
+                        {% if question.choice_d %}
+                            <label class="choice">
+
+                                <input
+                                    type="radio"
+                                    name="question_{{ question.id }}"
+                                    value="D"
+                                    required
+                                >
+
+                                <span class="choice-text">
+                                    {{ question.choice_d }}
+                                </span>
+
+                            </label>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+            <button
+                type="submit"
+                class="submit-btn"
+            >
+                ✅ إرسال الإجابات
+            </button>
+
+        </form>
+
+    {% else %}
+
+        <div class="empty">
+            📭 لا توجد أسئلة في هذا الواجب حاليًا.
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>

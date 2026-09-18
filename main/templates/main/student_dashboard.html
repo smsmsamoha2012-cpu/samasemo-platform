@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        لوحة الطالب - منصتي التعليمية
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f4f8ff;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        }
+
+        .welcome {
+            text-align: center;
+        }
+
+        .welcome h1 {
+            margin-top: 0;
+        }
+
+        .info {
+            color: #666;
+            line-height: 2;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(220px, 1fr)
+            );
+            gap: 18px;
+        }
+
+        .main-card {
+            display: block;
+            text-decoration: none;
+            color: #243f6b;
+            background: #f7f9fd;
+            border: 2px solid #e1e7f0;
+            border-radius: 20px;
+            padding: 28px 20px;
+            text-align: center;
+            transition: .2s;
+        }
+
+        .main-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .main-icon {
+            font-size: 55px;
+            margin-bottom: 12px;
+        }
+
+        .main-card h2 {
+            margin: 8px 0;
+        }
+
+        .main-card p {
+            color: #777;
+            line-height: 1.7;
+        }
+
+        .curriculum-card {
+            background: #eef5ff;
+        }
+
+        .skills-card {
+            background: #f8f2ff;
+        }
+
+        .ai-card {
+            background: #f1eaff;
+        }
+
+        .whatsapp-card {
+            background: #eafaf0;
+        }
+
+        .status {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 7px 13px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .status-open {
+            background: #e7f8ed;
+            color: #218838;
+        }
+
+        .status-closed {
+            background: #fff0f0;
+            color: #b02a37;
+        }
+
+        .vacation {
+            background: #fff7e8;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 20px;
+            line-height: 1.9;
+            text-align: center;
+        }
+
+        .account {
+            line-height: 2;
+        }
+
+        .logout {
+            display: block;
+            text-align: center;
+            color: #cf4b4b;
+            margin-top: 20px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .note {
+            text-align: center;
+            color: #777;
+            line-height: 1.8;
+        }
+
+        .closed-message {
+            background: #fff0f0;
+            color: #9c3030;
+            border-radius: 13px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+
+    <!-- ============================================ -->
+    <!-- الترحيب -->
+    <!-- ============================================ -->
+
+    <div class="box welcome">
+
+        <h1>
+            👋 أهلاً
+            {{ student.student_name }}
+        </h1>
+
+        <div class="info">
+
+            <div>
+
+                الصف:
+
+                <strong>
+                    {{ student.get_grade_display }}
+                </strong>
+
+            </div>
+
+            <div>
+
+                نوع التعليم:
+
+                <strong>
+                    {{ student.get_school_type_display }}
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================================ -->
+    <!-- الإجازة -->
+    <!-- ============================================ -->
+
+    {% if vacation %}
+
+        <div class="vacation">
+
+            📅 نحن حاليًا في فترة الإجازة.
+
+            <br><br>
+
+            {% if curriculum_open %}
+
+                📚 المنهج متاح حاليًا.
+
+            {% else %}
+
+                📚 المنهج غير متاح حاليًا.
+
+            {% endif %}
+
+            <br>
+
+            {% if skills_open %}
+
+                💻 المهارات متاحة حاليًا.
+
+            {% else %}
+
+                💻 المهارات غير متاحة حاليًا.
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- ============================================ -->
+    <!-- الكروت الرئيسية -->
+    <!-- ============================================ -->
+
+    <div class="box">
+
+        <div class="grid">
+
+
+            <!-- المنهج -->
+
+            {% if curriculum_open %}
+
+                <a
+                    href="{% url 'curriculum_page' %}"
+                    class="main-card curriculum-card"
+                >
+
+                    <div class="main-icon">
+                        📚
+                    </div>
+
+                    <h2>
+                        المنهج
+                    </h2>
+
+                    <p>
+                        المواد الدراسية التي تم تفعيلها لك.
+                    </p>
+
+                    <span class="status status-open">
+                        🔓 متاح
+                    </span>
+
+                </a>
+
+            {% else %}
+
+                <div class="main-card curriculum-card">
+
+                    <div class="main-icon">
+                        📚
+                    </div>
+
+                    <h2>
+                        المنهج
+                    </h2>
+
+                    <p>
+                        المنهج غير متاح حاليًا.
+                    </p>
+
+                    <span class="status status-closed">
+                        🔒 غير متاح
+                    </span>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- المهارات -->
+
+            {% if skills_open %}
+
+                <a
+                    href="{% url 'skills_page' %}"
+                    class="main-card skills-card"
+                >
+
+                    <div class="main-icon">
+                        💻
+                    </div>
+
+                    <h2>
+                        المهارات
+                    </h2>
+
+                    <p>
+                        المهارات والكورسات التي تم تفعيلها لك.
+                    </p>
+
+                    <span class="status status-open">
+                        🔓 متاحة
+                    </span>
+
+                </a>
+
+            {% else %}
+
+                <div class="main-card skills-card">
+
+                    <div class="main-icon">
+                        💻
+                    </div>
+
+                    <h2>
+                        المهارات
+                    </h2>
+
+                    <p>
+                        المهارات غير متاحة حاليًا.
+                    </p>
+
+                    <span class="status status-closed">
+                        🔒 غير متاحة
+                    </span>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- الذكاء الاصطناعي -->
+
+            <div class="main-card ai-card">
+
+                <div class="main-icon">
+                    🤖
+                </div>
+
+                <h2>
+                    مساعد المنصة
+                </h2>
+
+                <p>
+                    المساعد متاح من داخل المادة
+                    أو المهارة المفعلة لك.
+                </p>
+
+                <span class="status status-open">
+                    متاح داخل المحتوى
+                </span>
+
+            </div>
+
+
+            <!-- واتساب -->
+
+            <a
+                href="{{ support_whatsapp }}"
+                target="_blank"
+                class="main-card whatsapp-card"
+            >
+
+                <div class="main-icon">
+                    💬
+                </div>
+
+                <h2>
+                    واتساب
+                </h2>
+
+                <p>
+                    تواصلي مع المنصة عند الحاجة.
+                </p>
+
+                <span class="status status-open">
+                    الدعم
+                </span>
+
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================================ -->
+    <!-- الحساب -->
+    <!-- ============================================ -->
+
+    <div class="box account">
+
+        <h2>
+            👤 بيانات الحساب
+        </h2>
+
+        <p>
+
+            اسم الطالب:
+
+            <strong>
+                {{ student.student_name }}
+            </strong>
+
+        </p>
+
+        <p>
+
+            الصف:
+
+            <strong>
+                {{ student.get_grade_display }}
+            </strong>
+
+        </p>
+
+        <p>
+
+            نوع التعليم:
+
+            <strong>
+                {{ student.get_school_type_display }}
+            </strong>
+
+        </p>
+
+        <p>
+
+            حالة الحساب:
+
+            <strong>
+                مفعل ✅
+            </strong>
+
+        </p>
+
+    </div>
+
+
+    <!-- ============================================ -->
+    <!-- ملاحظة -->
+    <!-- ============================================ -->
+
+    <div class="box note">
+
+        📌 الذكاء الاصطناعي لا يظهر هنا كصفحة عامة.
+
+        <br>
+
+        ادخلي إلى المادة أو المهارة المفعلة،
+        وستجدي المساعد بداخلها.
+
+        <br><br>
+
+        المساعد الحالي موجود داخل المنصة،
+        لكن ربطه بمزود AI حقيقي يحتاج API ومفتاح مزود الخدمة.
+
+    </div>
+
+
+    <!-- ============================================ -->
+    <!-- تسجيل الخروج -->
+    <!-- ============================================ -->
+
+    <a
+        class="logout"
+        href="{% url 'student_logout' %}"
+    >
+        تسجيل الخروج
+    </a>
+
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        إضافة مادة أو مهارة
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            background: #f4f8ff;
+            font-family: Arial, sans-serif;
+            color: #243f6b;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: auto;
+        }
+
+        .box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(220px, 1fr)
+            );
+            gap: 15px;
+        }
+
+        .card {
+            background: #f7f9fd;
+            border: 1px solid #e1e7f0;
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .card label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .card input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .skill-card {
+            background: #f8f2ff;
+        }
+
+        .info {
+            color: #666;
+            line-height: 1.8;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .notice {
+            background: #fff7e8;
+            padding: 18px;
+            border-radius: 14px;
+            line-height: 1.9;
+            margin-bottom: 20px;
+        }
+
+        .error {
+            background: #fff0f0;
+            color: #b02a37;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .success {
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 20px;
+            border-radius: 12px;
+            line-height: 2;
+            margin-bottom: 20px;
+        }
+
+        .empty {
+            background: #f7f9fd;
+            color: #777;
+            padding: 25px;
+            border-radius: 14px;
+            text-align: center;
+        }
+
+        .price-box {
+            background: #eef5ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .total {
+            font-size: 30px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .vodafone {
+            background: #fff7e8;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            line-height: 2;
+            margin-bottom: 20px;
+        }
+
+        .vodafone-number {
+            display: inline-block;
+            direction: ltr;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .upload-label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: #3475df;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+
+        button:hover {
+            opacity: .9;
+        }
+
+        .whatsapp {
+            display: block;
+            background: #25d366;
+            color: white;
+            padding: 14px;
+            text-decoration: none;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            color: #3475df;
+            text-decoration: none;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .small {
+            color: #777;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+
+    <!-- ========================================= -->
+    <!-- العنوان -->
+    <!-- ========================================= -->
+
+    <div class="box header">
+
+        <h1>
+            ➕ إضافة مادة أو مهارة
+        </h1>
+
+        <p>
+            اختاري ما تريدين إضافته إلى حسابك.
+        </p>
+
+        <p class="small">
+
+            ⚠️ أي إضافة لن تتفعل إلا بعد مراجعة
+            المدرسة والموافقة على الطلب.
+
+        </p>
+
+    </div>
+
+
+    {% if success %}
+
+        <div class="box">
+
+            <div class="success">
+
+                ✅ تم إرسال طلب الإضافة بنجاح.
+
+                <br>
+
+                قيمة الطلب:
+
+                <strong>
+                    {{ amount }}
+                    جنيه
+                </strong>
+
+                <br>
+
+                انتظري موافقة الإدارة،
+                وبعد الموافقة فقط سيتم فتح المحتوى.
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    {% if error %}
+
+        <div class="error">
+
+            ❌ {{ error }}
+
+        </div>
+
+    {% endif %}
+
+
+    {% if not success %}
+
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+        >
+
+            {% csrf_token %}
+
+
+            <!-- ===================================== -->
+            <!-- المواد -->
+            <!-- ===================================== -->
+
+            {% if curriculum_open %}
+
+                <div class="box">
+
+                    <h2>
+                        📚 إضافة مادة
+                    </h2>
+
+                    <div class="notice">
+
+                        المواد الموجودة هنا هي المواد
+                        التي لم يتم تفعيلها لك من قبل.
+
+                        <br>
+
+                        سعر كل مادة هو سعر المادة الشهري للصف.
+
+                    </div>
+
+
+                    <div class="grid">
+
+                        {% for subject in available_subjects %}
+
+                            <div class="card">
+
+                                <label>
+
+                                    <input
+                                        type="checkbox"
+                                        name="selected_subjects"
+                                        value="{{ subject.subject_name }}"
+                                        class="subject-input"
+                                        data-price="{{ subject_price }}"
+                                    >
+
+                                    <span>
+                                        {{ subject.subject_name }}
+                                    </span>
+
+                                </label>
+
+
+                                <div class="info">
+
+                                    السعر الشهري:
+
+                                    <strong>
+                                        {{ subject_price }}
+                                        جنيه
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        {% empty %}
+
+                            <div class="empty">
+
+                                📭 لا توجد مواد إضافية متاحة لك حاليًا.
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- ===================================== -->
+            <!-- المهارات -->
+            <!-- ===================================== -->
+
+            {% if skills_open %}
+
+                <div class="box">
+
+                    <h2>
+                        💻 إضافة مهارة
+                    </h2>
+
+                    <div class="notice">
+
+                        ✅ كل مهارة كورس كامل.
+
+                        <br>
+
+                        ✅ المهارة لا تنتهي بعد الشراء.
+
+                        <br>
+
+                        ✅ يمكنك اختيار أكثر من مهارة.
+
+                    </div>
+
+
+                    <div class="grid">
+
+                        {% for skill in available_skills %}
+
+                            <div class="card skill-card">
+
+                                <label>
+
+                                    <input
+                                        type="checkbox"
+                                        name="selected_skills"
+                                        value="{{ skill.name }}"
+                                        class="skill-input"
+                                        data-price="{{ skill.course_price }}"
+                                    >
+
+                                    <span>
+                                        {{ skill.name }}
+                                    </span>
+
+                                </label>
+
+
+                                <div class="info">
+
+                                    سعر الكورس:
+
+                                    <strong>
+                                        {{ skill.course_price }}
+                                        جنيه
+                                    </strong>
+
+
+                                    {% with prerequisites=skill.prerequisites.all %}
+
+                                        {% if prerequisites %}
+
+                                            <br>
+
+                                            المتطلبات السابقة:
+
+                                            {% for prerequisite in prerequisites %}
+
+                                                {{ prerequisite.name }}
+
+                                                {% if not forloop.last %}
+                                                    +
+                                                {% endif %}
+
+                                            {% endfor %}
+
+                                        {% endif %}
+
+                                    {% endwith %}
+
+                                </div>
+
+                            </div>
+
+                        {% empty %}
+
+                            <div class="empty">
+
+                                📭 لا توجد مهارات إضافية متاحة لك حاليًا.
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- ===================================== -->
+            <!-- حساب السعر -->
+            <!-- ===================================== -->
+
+            <div class="box">
+
+                <h2>
+                    💰 إجمالي الطلب
+                </h2>
+
+                <div class="price-box">
+
+                    <div>
+                        سعر المواد:
+                        <strong>
+                            <span id="subjectsPrice">
+                                0
+                            </span>
+                            جنيه
+                        </strong>
+                    </div>
+
+
+                    <div>
+                        سعر المهارات:
+                        <strong>
+                            <span id="skillsPrice">
+                                0
+                            </span>
+                            جنيه
+                        </strong>
+                    </div>
+
+
+                    <div class="total">
+
+                        الإجمالي:
+                        <span id="totalPrice">
+                            0
+                        </span>
+
+                        جنيه
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ===================================== -->
+            <!-- الدفع -->
+            <!-- ===================================== -->
+
+            <div class="box">
+
+                <div class="vodafone">
+
+                    💳 حوّلي قيمة الطلب إلى Vodafone Cash:
+
+                    <br>
+
+                    <span class="vodafone-number">
+                        {{ vodafone_number }}
+                    </span>
+
+                </div>
+
+
+                <label class="upload-label">
+
+                    📸 صورة التحويل
+
+                </label>
+
+
+                <input
+                    class="file-input"
+                    type="file"
+                    name="transfer_image"
+                    accept="image/*"
+                    required
+                >
+
+
+                <button type="submit">
+
+                    إرسال طلب الإضافة ✅
+
+                </button>
+
+            </div>
+
+        </form>
+
+    {% endif %}
+
+
+    <!-- ========================================= -->
+    <!-- واتساب -->
+    <!-- ========================================= -->
+
+    <a
+        class="whatsapp"
+        href="{{ support_whatsapp }}"
+        target="_blank"
+    >
+
+        💬 مشكلة؟ تواصلي مع المنصة على واتساب
+
+    </a>
+
+
+    <a
+        class="back"
+        href="{% url 'student_dashboard' %}"
+    >
+
+        ← العودة للوحة الطالب
+
+    </a>
+
+</div>
+
+
+<script>
+
+const subjectInputs =
+    document.querySelectorAll(
+        ".subject-input"
+    );
+
+
+const skillInputs =
+    document.querySelectorAll(
+        ".skill-input"
+    );
+
+
+const subjectPriceElement =
+    document.getElementById(
+        "subjectsPrice"
+    );
+
+
+const skillsPriceElement =
+    document.getElementById(
+        "skillsPrice"
+    );
+
+
+const totalPriceElement =
+    document.getElementById(
+        "totalPrice"
+    );
+
+
+function calculateTotal() {
+
+    let subjectTotal = 0;
+
+    let skillTotal = 0;
+
+
+    subjectInputs.forEach(
+        function(input) {
+
+            if (input.checked) {
+
+                subjectTotal += Number(
+                    input.dataset.price || 0
+                );
+
+            }
+
+        }
+    );
+
+
+    skillInputs.forEach(
+        function(input) {
+
+            if (input.checked) {
+
+                skillTotal += Number(
+                    input.dataset.price || 0
+                );
+
+            }
+
+        }
+    );
+
+
+    subjectPriceElement.textContent =
+        subjectTotal;
+
+
+    skillsPriceElement.textContent =
+        skillTotal;
+
+
+    totalPriceElement.textContent =
+        subjectTotal + skillTotal;
+}
+
+
+subjectInputs.forEach(
+    function(input) {
+
+        input.addEventListener(
+            "change",
+            calculateTotal
+        );
+
+    }
+);
+
+
+skillInputs.forEach(
+    function(input) {
+
+        input.addEventListener(
+            "change",
+            calculateTotal
+        );
+
+    }
+);
+
+
+calculateTotal();
+
+</script>
+
+</body>
+
+</html>

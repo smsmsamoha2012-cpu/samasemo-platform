@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        الأسعار
+    </title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 25px;
+            background: #f4f8ff;
+            font-family: Arial, sans-serif;
+            color: #243f6b;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(220px, 1fr)
+            );
+            gap: 15px;
+        }
+
+        .card {
+            background: #f7f9fd;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .skill {
+            background: #f7efff;
+        }
+
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            color: #3475df;
+            text-decoration: none;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="box">
+
+        <h1>
+            💰 أسعار المنصة
+        </h1>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>
+            📚 أسعار المنهج
+        </h2>
+
+        <div class="grid">
+
+            {% for grade in grades %}
+
+                {% if grade.is_active %}
+
+                    <div class="card">
+
+                        <h3>
+                            {{ grade.grade }}
+                        </h3>
+
+                        <p>
+                            المادة شهريًا:
+                        </p>
+
+                        <div class="price">
+                            {{ grade.monthly_subject_price }}
+                            جنيه
+                        </div>
+
+                        <p>
+                            الترم كامل:
+                        </p>
+
+                        <div class="price">
+                            {{ grade.full_term_price }}
+                            جنيه
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>
+            💻 أسعار المهارات
+        </h2>
+
+        <div class="grid">
+
+            {% for skill in skills %}
+
+                <div class="card skill">
+
+                    <h3>
+                        {{ skill.name }}
+                    </h3>
+
+                    <div class="price">
+
+                        {{ skill.course_price }}
+
+                        جنيه
+
+                    </div>
+
+                    <p>
+                        الكورس كامل ولا ينتهي.
+                    </p>
+
+                </div>
+
+            {% empty %}
+
+                <p>
+                    لا توجد مهارات مضافة حاليًا.
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <a
+        class="back"
+        href="/"
+    >
+        ← العودة للصفحة الرئيسية
+    </a>
+
+</div>
+
+</body>
+
+</html>
