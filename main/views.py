@@ -3404,6 +3404,9 @@ def skill_homework_detail(request, homework_id):
 # =========================================================
 # ولي الأمر
 # =========================================================
+# =========================================================
+# صفحة ولي الأمر
+# =========================================================
 
 def parent(request):
     """
@@ -3417,6 +3420,39 @@ def parent(request):
     students = Student.objects.none()
     parent_phone = ""
 
+    def normalize_phone(phone):
+        phone = str(phone or "").strip()
+
+        # تحويل الأرقام العربية إلى أرقام إنجليزية
+        arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+        english_digits = "0123456789"
+
+        translation_table = str.maketrans(
+            arabic_digits,
+            english_digits,
+        )
+
+        phone = phone.translate(
+            translation_table
+        )
+
+        # إزالة المسافات والشرطات والأقواس
+        phone = (
+            phone.replace(" ", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+        )
+
+        # توحيد أرقام مصر لو اتكتبت بصيغة +20
+        if phone.startswith("+20"):
+            phone = "0" + phone[3:]
+
+        elif phone.startswith("20") and len(phone) == 12:
+            phone = "0" + phone[2:]
+
+        return phone
+
     if request.method == "POST":
 
         parent_phone = (
@@ -3427,7 +3463,11 @@ def parent(request):
             or ""
         ).strip()
 
-        if not parent_phone:
+        normalized_phone = normalize_phone(
+            parent_phone
+        )
+
+        if not normalized_phone:
 
             error = (
                 "من فضلك اكتبي رقم ولي الأمر."
@@ -3435,20 +3475,38 @@ def parent(request):
 
         else:
 
-            students = (
+            # جلب الطلاب ثم مقارنة الرقم بعد توحيد صيغته
+            all_students = (
                 Student.objects
-                .filter(
-                    parent_phone=parent_phone
+                .exclude(
+                    parent_phone=""
                 )
-                .order_by("student_name")
+                .order_by(
+                    "student_name"
+                )
             )
 
-            if students.exists():
+            matching_students = []
 
-                # حفظ رقم ولي الأمر في الجلسة
-                request.session["parent_phone"] = (
-                    parent_phone
+            for student_obj in all_students:
+
+                saved_phone = normalize_phone(
+                    student_obj.parent_phone
                 )
+
+                if saved_phone == normalized_phone:
+                    matching_students.append(
+                        student_obj
+                    )
+
+            if matching_students:
+
+                students = matching_students
+
+                # حفظ الرقم الموحد في الجلسة
+                request.session[
+                    "parent_phone"
+                ] = normalized_phone
 
             else:
 
@@ -3492,17 +3550,72 @@ def parent_student(request, student_id):
         or ""
     ).strip()
 
-    # لو ولي الأمر لم يدخل رقمه أولًا
     if not parent_phone:
 
         return redirect("parent")
 
-    # التأكد أن الطالب تابع لنفس رقم ولي الأمر
+    # توحيد رقم ولي الأمر الموجود في الجلسة
+    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+    english_digits = "0123456789"
+
+    translation_table = str.maketrans(
+        arabic_digits,
+        english_digits,
+    )
+
+    parent_phone = parent_phone.translate(
+        translation_table
+    )
+
+    parent_phone = (
+        parent_phone
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    if parent_phone.startswith("+20"):
+        parent_phone = "0" + parent_phone[3:]
+
+    elif (
+        parent_phone.startswith("20")
+        and len(parent_phone) == 12
+    ):
+        parent_phone = "0" + parent_phone[2:]
+
+    # نجيب الطالب أولًا
     student_obj = get_object_or_404(
         Student,
         id=student_id,
-        parent_phone=parent_phone,
     )
+
+    # نوحد رقم ولي الأمر المحفوظ للطالب
+    student_phone = (
+        str(
+            student_obj.parent_phone
+            or ""
+        )
+        .strip()
+        .translate(translation_table)
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    if student_phone.startswith("+20"):
+        student_phone = "0" + student_phone[3:]
+
+    elif (
+        student_phone.startswith("20")
+        and len(student_phone) == 12
+    ):
+        student_phone = "0" + student_phone[2:]
+
+    # التأكد أن الطالب تابع لنفس ولي الأمر
+    if student_phone != parent_phone:
+        return redirect("parent")
 
     return render(
         request,
@@ -3511,7 +3624,6 @@ def parent_student(request, student_id):
             "student": student_obj,
         },
     )
-
 
 # =========================================================
 # منهج الطالب - لولي الأمر
