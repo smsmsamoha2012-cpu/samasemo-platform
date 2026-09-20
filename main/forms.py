@@ -1,8 +1,6 @@
 from django import forms
 
 from .models import (
-    DEFAULT_FULL_TERM_PRICES,
-    DEFAULT_MONTHLY_PRICES,
     GradeSetting,
     Skill,
     Student,
@@ -21,18 +19,6 @@ def ensure_grade_settings():
             grade=grade,
             defaults={
                 "is_active": True,
-                "monthly_subject_price": (
-                    DEFAULT_MONTHLY_PRICES.get(
-                        grade,
-                        0,
-                    )
-                ),
-                "full_term_price": (
-                    DEFAULT_FULL_TERM_PRICES.get(
-                        grade,
-                        0,
-                    )
-                ),
             },
         )
 
