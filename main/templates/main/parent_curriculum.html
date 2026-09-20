@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        منهج {{ student.student_name }}
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1150px;
+            margin: 35px auto;
+        }
+
+        .back-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: white;
+            background: #294a7c;
+            padding: 12px 22px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .student-header {
+            background: white;
+            border-radius: 25px;
+            padding: 28px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .student-header h1 {
+            margin: 0 0 15px;
+            color: #294a7c;
+        }
+
+        .student-info {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #f3f7fc;
+            padding: 12px 18px;
+            border-radius: 12px;
+        }
+
+        .page-title {
+            text-align: center;
+            color: #294a7c;
+            margin: 30px 0;
+        }
+
+        .subject-card {
+            background: white;
+            border-radius: 22px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+        }
+
+        .subject-title {
+            color: #294a7c;
+            font-size: 25px;
+            margin-top: 0;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stat {
+            background: #f5f8fc;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat strong {
+            display: block;
+            font-size: 24px;
+            color: #294a7c;
+            margin-bottom: 5px;
+        }
+
+        .stat span {
+            color: #666;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .finished {
+            background: #e7f7ed;
+            color: #218838;
+        }
+
+        .not-finished {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .lessons-title {
+            color: #294a7c;
+            margin-top: 25px;
+        }
+
+        .lesson {
+            border: 1px solid #e5e9ef;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 12px;
+            background: #fafcff;
+        }
+
+        .lesson-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .lesson-status {
+            margin-top: 8px;
+            color: #666;
+        }
+
+        .homework {
+            background: #fffaf0;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .empty {
+            background: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+        }
+
+        @media (max-width: 800px) {
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+        }
+
+        @media (max-width: 500px) {
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- العودة -->
+
+    <a
+        href="{% url 'parent_student' student.id %}"
+        class="back-btn"
+    >
+        ← العودة لصفحة الطالبة
+    </a>
+
+
+    <!-- بيانات الطالبة -->
+
+    <div class="student-header">
+
+        <h1>
+            📚 منهج {{ student.student_name }}
+        </h1>
+
+        <div class="student-info">
+
+            <div class="info-box">
+
+                <strong>
+                    الصف:
+                </strong>
+
+                {{ student.grade }}
+
+            </div>
+
+
+            <div class="info-box">
+
+                <strong>
+                    نوع التعليم:
+                </strong>
+
+                {{ student.school_type }}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <h2 class="page-title">
+        متابعة المنهج
+    </h2>
+
+
+    {% if progress %}
+
+
+        {% for item in progress %}
+
+            <div class="subject-card">
+
+
+                <h2 class="subject-title">
+
+                    📖 {{ item.subject }}
+
+                </h2>
+
+
+                <!-- الإحصائيات -->
+
+                <div class="stats">
+
+
+                    <div class="stat">
+
+                        <strong>
+                            {{ item.total_lessons }}
+                        </strong>
+
+                        <span>
+                            إجمالي الحصص
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat">
+
+                        <strong>
+                            {{ item.completed_lessons }}
+                        </strong>
+
+                        <span>
+                            الحصص المكتملة
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat">
+
+                        <strong>
+                            {{ item.remaining_lessons }}
+                        </strong>
+
+                        <span>
+                            الحصص المتبقية
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat">
+
+                        <strong>
+                            {{ item.total_homeworks }}
+                        </strong>
+
+                        <span>
+                            إجمالي الواجبات
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- حالة المادة -->
+
+                {% if item.subject_finished %}
+
+                    <div class="status finished">
+
+                        ✅ تم الانتهاء من المادة
+
+                    </div>
+
+                {% else %}
+
+                    <div class="status not-finished">
+
+                        📚 المادة ما زال بها محتوى متبقٍ
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- الحصص -->
+
+                <h3 class="lessons-title">
+                    الحصص
+                </h3>
+
+
+                {% if item.lesson_data %}
+
+
+                    {% for lesson in item.lesson_data %}
+
+                        <div class="lesson">
+
+
+                            <div class="lesson-name">
+
+                                🎥 {{ lesson.lesson.title }}
+
+                            </div>
+
+
+                            <div class="lesson-status">
+
+                                {% if lesson.watched %}
+
+                                    ✅ تمت مشاهدة الحصة
+
+                                {% else %}
+
+                                    ⏳ لم تتم مشاهدة الحصة بعد
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- الواجبات الخاصة بالحصة -->
+
+                            {% if lesson.homeworks %}
+
+                                {% for homework in lesson.homeworks %}
+
+                                    <div class="homework">
+
+                                        📝
+
+                                        <strong>
+                                            {{ homework.homework.title }}
+                                        </strong>
+
+
+                                        {% if homework.submitted %}
+
+                                            <div>
+                                                ✅ تم تسليم الواجب
+                                            </div>
+
+                                        {% else %}
+
+                                            <div>
+                                                ⏳ لم يتم تسليم الواجب
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                {% endfor %}
+
+                            {% endif %}
+
+
+                        </div>
+
+                    {% endfor %}
+
+
+                {% else %}
+
+                    <p>
+                        لا توجد حصص متاحة حاليًا في هذه المادة.
+                    </p>
+
+                {% endif %}
+
+
+            </div>
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <div class="empty">
+
+            <h2>
+                📚 لا توجد مواد مشتركة حاليًا
+            </h2>
+
+            <p>
+                لا توجد مواد مفعلة لهذه الطالبة حاليًا.
+            </p>
+
+        </div>
+
+
+    {% endif %}
+
+
+</div>
+
+</body>
+
+</html>

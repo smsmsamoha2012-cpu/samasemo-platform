@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>مهارات {{ student.student_name }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1150px;
+            margin: 40px auto;
+        }
+
+        .back-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: white;
+            background: #294a7c;
+            padding: 12px 22px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        .back-btn:hover {
+            opacity: 0.9;
+        }
+
+        .student-header {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .student-header h1 {
+            margin: 0 0 20px;
+            color: #294a7c;
+            font-size: 30px;
+        }
+
+        .student-info {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #f3f7fc;
+            padding: 15px 20px;
+            border-radius: 15px;
+            min-width: 200px;
+            font-size: 17px;
+        }
+
+        .info-box strong {
+            color: #294a7c;
+        }
+
+        .page-title {
+            text-align: center;
+            color: #294a7c;
+            font-size: 30px;
+            margin: 35px 0 25px;
+        }
+
+        .empty-box {
+            background: white;
+            border-radius: 22px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            color: #666;
+            font-size: 19px;
+        }
+
+        .skill-card {
+            background: white;
+            border-radius: 25px;
+            padding: 28px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .skill-title {
+            color: #294a7c;
+            font-size: 27px;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: #f3f7fc;
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #294a7c;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 15px;
+        }
+
+        .section-title {
+            color: #294a7c;
+            font-size: 22px;
+            margin: 25px 0 15px;
+        }
+
+        .lesson-card {
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .lesson-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .lesson-name {
+            font-size: 19px;
+            font-weight: bold;
+            color: #243f6b;
+        }
+
+        .status {
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .watched {
+            background: #e5f7ea;
+            color: #237a3b;
+        }
+
+        .not-watched {
+            background: #fff0e6;
+            color: #b85c00;
+        }
+
+        .homework-box {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .homework-item {
+            background: white;
+            border-radius: 14px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .homework-name {
+            font-weight: bold;
+            color: #294a7c;
+            margin-bottom: 8px;
+        }
+
+        .homework-status {
+            font-size: 15px;
+            color: #666;
+        }
+
+        .submitted {
+            color: #237a3b;
+            font-weight: bold;
+        }
+
+        .not-submitted {
+            color: #b85c00;
+            font-weight: bold;
+        }
+
+        .all-homeworks {
+            background: #f8faff;
+            border-radius: 18px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .all-homeworks h4 {
+            margin-top: 0;
+            color: #294a7c;
+            font-size: 19px;
+        }
+
+        @media (max-width: 900px) {
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .container {
+                width: 94%;
+                margin: 25px auto;
+            }
+
+            .student-header {
+                padding: 20px;
+            }
+
+            .student-header h1 {
+                font-size: 25px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .skill-card {
+                padding: 20px;
+            }
+
+            .page-title {
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- العودة لصفحة الطالب -->
+        <a
+            href="{% url 'parent_student' student.id %}"
+            class="back-btn"
+        >
+            ← العودة لصفحة الطالب
+        </a>
+
+
+        <!-- بيانات الطالب -->
+        <div class="student-header">
+
+            <h1>
+                🧠 مهارات {{ student.student_name }}
+            </h1>
+
+            <div class="student-info">
+
+                <div class="info-box">
+                    <strong>الصف:</strong>
+                    {{ student.grade }}
+                </div>
+
+                <div class="info-box">
+                    <strong>نوع التعليم:</strong>
+                    {{ student.school_type }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <h2 class="page-title">
+            متابعة المهارات
+        </h2>
+
+
+        {% if progress %}
+
+            {% for item in progress %}
+
+                <div class="skill-card">
+
+                    <!-- اسم المهارة -->
+                    <h3 class="skill-title">
+                        🧠 {{ item.skill.name }}
+                    </h3>
+
+
+                    <!-- إحصائيات المهارة -->
+                    <div class="stats">
+
+                        <div class="stat-box">
+
+                            <span class="stat-number">
+                                {{ item.total_lessons }}
+                            </span>
+
+                            <span class="stat-label">
+                                إجمالي الحصص
+                            </span>
+
+                        </div>
+
+
+                        <div class="stat-box">
+
+                            <span class="stat-number">
+                                {{ item.watched_lessons }}
+                            </span>
+
+                            <span class="stat-label">
+                                حصص تمت مشاهدتها
+                            </span>
+
+                        </div>
+
+
+                        <div class="stat-box">
+
+                            <span class="stat-number">
+                                {{ item.unwatched_lessons }}
+                            </span>
+
+                            <span class="stat-label">
+                                حصص لم تتم مشاهدتها
+                            </span>
+
+                        </div>
+
+
+                        <div class="stat-box">
+
+                            <span class="stat-number">
+                                {{ item.total_homeworks }}
+                            </span>
+
+                            <span class="stat-label">
+                                إجمالي الواجبات
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- الحصص -->
+                    <h4 class="section-title">
+                        📚 الحصص
+                    </h4>
+
+
+                    {% if item.lesson_data %}
+
+                        {% for lesson_item in item.lesson_data %}
+
+                            <div class="lesson-card">
+
+                                <div class="lesson-header">
+
+                                    <div class="lesson-name">
+                                        {{ lesson_item.lesson.title }}
+                                    </div>
+
+
+                                    {% if lesson_item.is_watched %}
+
+                                        <span class="status watched">
+                                            ✓ تمت المشاهدة
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="status not-watched">
+                                            لم تتم المشاهدة
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- واجبات الحصة -->
+                                {% if lesson_item.homeworks %}
+
+                                    <div class="homework-box">
+
+                                        <strong>
+                                            📝 واجبات الحصة
+                                        </strong>
+
+
+                                        {% for homework_item in lesson_item.homeworks %}
+
+                                            <div class="homework-item">
+
+                                                <div class="homework-name">
+                                                    {{ homework_item.homework.title }}
+                                                </div>
+
+
+                                                {% if homework_item.submitted %}
+
+                                                    <div class="homework-status submitted">
+                                                        ✓ تم تسليم الواجب
+                                                    </div>
+
+                                                {% else %}
+
+                                                    <div class="homework-status not-submitted">
+                                                        لم يتم تسليم الواجب
+                                                    </div>
+
+                                                {% endif %}
+
+
+                                                {% if homework_item.result %}
+
+                                                    <div class="homework-status">
+                                                        النتيجة:
+                                                        {{ homework_item.result.score }}
+                                                        /
+                                                        {{ homework_item.homework.total_marks }}
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        {% endfor %}
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <div class="empty-box">
+                            لا توجد حصص متاحة لهذه المهارة حاليًا.
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- ملخص الواجبات -->
+                    <div class="all-homeworks">
+
+                        <h4>
+                            📝 ملخص الواجبات
+                        </h4>
+
+                        <p>
+                            إجمالي الواجبات:
+                            <strong>
+                                {{ item.total_homeworks }}
+                            </strong>
+                        </p>
+
+                        <p>
+                            الواجبات التي تم تسليمها:
+                            <strong>
+                                {{ item.submitted_homeworks }}
+                            </strong>
+                        </p>
+
+                        <p>
+                            الواجبات المتبقية:
+                            <strong>
+                                {{ item.remaining_homeworks }}
+                            </strong>
+                        </p>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-box">
+
+                🧠 لا توجد مهارات مشتركة فيها هذه الطالبة حاليًا.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</body>
+
+</html>

@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
 from main.teacher_views import (
@@ -18,9 +19,14 @@ from main.views import (
     lesson_watch_progress,
     old_student,
     old_student_subscription,
+    parent,
+    parent_curriculum,
+    parent_skills,
+    parent_student,
     prices,
     protected_lesson_video,
     skill_detail,
+    skill_homework_detail,
     skills_page,
     student,
     student_dashboard,
@@ -131,7 +137,7 @@ urlpatterns = [
 
 
     # =================================================
-    # الواجب الإلكتروني
+    # الواجب الإلكتروني للمواد
     # =================================================
 
     path(
@@ -142,13 +148,24 @@ urlpatterns = [
 
 
     # =================================================
-    # المهارة
+    # صفحة المهارة
     # =================================================
 
     path(
         "student/skill/<int:skill_id>/",
         skill_detail,
         name="skill_detail",
+    ),
+
+
+    # =================================================
+    # واجب المهارة
+    # =================================================
+
+    path(
+        "student/skill-homework/<int:homework_id>/",
+        skill_homework_detail,
+        name="skill_homework_detail",
     ),
 
 
@@ -219,13 +236,57 @@ urlpatterns = [
 
 
     # =================================================
-    # AI
+    # الذكاء الاصطناعي
     # =================================================
 
     path(
         "student/ai/",
         ai_chat,
         name="ai_chat",
+    ),
+
+
+    # =================================================
+    # ولي الأمر
+    # =================================================
+
+    path(
+        "parent/",
+        parent,
+        name="parent",
+    ),
+
+
+    # =================================================
+    # صفحة طالب لولي الأمر
+    # =================================================
+
+    path(
+        "parent/student/<int:student_id>/",
+        parent_student,
+        name="parent_student",
+    ),
+
+
+    # =================================================
+    # منهج الطالب لولي الأمر
+    # =================================================
+
+    path(
+        "parent/student/<int:student_id>/curriculum/",
+        parent_curriculum,
+        name="parent_curriculum",
+    ),
+
+
+    # =================================================
+    # مهارات الطالب لولي الأمر
+    # =================================================
+
+    path(
+        "parent/student/<int:student_id>/skills/",
+        parent_skills,
+        name="parent_skills",
     ),
 
 

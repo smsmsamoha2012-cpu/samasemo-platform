@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ student.student_name }} - لوحة الطالب</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 40px auto;
+        }
+
+        .back-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: white;
+            background: #294a7c;
+            padding: 12px 22px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        .back-btn:hover {
+            opacity: 0.9;
+        }
+
+        .student-header {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            margin-bottom: 35px;
+        }
+
+        .student-header h1 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #294a7c;
+            font-size: 30px;
+        }
+
+        .student-info {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #f3f7fc;
+            padding: 15px 20px;
+            border-radius: 15px;
+            min-width: 200px;
+            font-size: 17px;
+        }
+
+        .info-box strong {
+            color: #294a7c;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 27px;
+            color: #294a7c;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .dashboard-card {
+            text-decoration: none;
+            background: white;
+            border-radius: 25px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            transition: 0.2s;
+            color: #243f6b;
+            border: 2px solid transparent;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: #294a7c;
+        }
+
+        .card-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        .dashboard-card h2 {
+            margin: 10px 0;
+            color: #294a7c;
+            font-size: 28px;
+        }
+
+        .dashboard-card p {
+            color: #666;
+            font-size: 17px;
+            line-height: 1.8;
+            margin: 0;
+        }
+
+        @media (max-width: 700px) {
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .student-header {
+                padding: 20px;
+            }
+
+            .student-header h1 {
+                font-size: 25px;
+            }
+
+            .info-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- العودة لصفحة ولي الأمر -->
+        <a href="{% url 'parent' %}" class="back-btn">
+            ← العودة لصفحة ولي الأمر
+        </a>
+
+
+        <!-- بيانات الطالب -->
+        <div class="student-header">
+
+            <h1>
+                👤 {{ student.student_name }}
+            </h1>
+
+            <div class="student-info">
+
+                <div class="info-box">
+                    <strong>الصف:</strong>
+                    {{ student.grade }}
+                </div>
+
+                <div class="info-box">
+                    <strong>نوع التعليم:</strong>
+                    {{ student.school_type }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- الاختيارات -->
+        <h2 class="section-title">
+            اختاري القسم الذي تريدين متابعته
+        </h2>
+
+
+        <div class="cards">
+
+
+            <!-- ========================================= -->
+            <!-- المنهج -->
+            <!-- ========================================= -->
+
+            <a
+                href="{% url 'parent_curriculum' student.id %}"
+                class="dashboard-card"
+            >
+
+                <div class="card-icon">
+                    📚
+                </div>
+
+                <h2>
+                    المنهج
+                </h2>
+
+                <p>
+                    متابعة المواد المشتركة فيها الطالبة،
+                    الحصص، الواجبات، الامتحانات،
+                    ونسبة التقدم في المنهج.
+                </p>
+
+            </a>
+
+
+            <!-- ========================================= -->
+            <!-- المهارات -->
+            <!-- ========================================= -->
+
+            <a
+                href="{% url 'parent_skills' student.id %}"
+                class="dashboard-card"
+            >
+
+                <div class="card-icon">
+                    🧠
+                </div>
+
+                <h2>
+                    المهارات
+                </h2>
+
+                <p>
+                    متابعة المهارات المشتركة فيها الطالبة،
+                    الحصص، الواجبات،
+                    والحصص التي تمت مشاهدتها.
+                </p>
+
+            </a>
+
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

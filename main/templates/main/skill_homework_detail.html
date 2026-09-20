@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ homework.title }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 900px;
+            margin: 40px auto;
+        }
+
+        .back-btn {
+            display: inline-block;
+            text-decoration: none;
+            background: #294a7c;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #294a7c;
+        }
+
+        h2 {
+            color: #294a7c;
+            margin-top: 25px;
+        }
+
+        .info {
+            background: #f5f7fb;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .info p {
+            margin: 8px 0;
+        }
+
+        .description {
+            line-height: 1.8;
+            background: #fffaf5;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .homework-file {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f7fb;
+            border-radius: 12px;
+        }
+
+        .homework-file a {
+            color: #294a7c;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .upload-box {
+            margin-top: 20px;
+            padding: 25px;
+            border: 2px dashed #294a7c;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+
+        button {
+            border: none;
+            background: #294a7c;
+            color: white;
+            padding: 13px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            background: #eef7ee;
+            color: #286b2f;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 12px;
+            background: #f5f7fb;
+            margin-top: 20px;
+        }
+
+        .result {
+            padding: 20px;
+            border-radius: 15px;
+            background: #eef7ee;
+            margin-top: 20px;
+        }
+
+        .warning {
+            color: #a35b00;
+        }
+
+        .student-name {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- الرجوع لصفحة المهارة -->
+    <a
+        href="{% url 'skill_detail' skill.id %}"
+        class="back-btn"
+    >
+        ← العودة للمهارة
+    </a>
+
+
+    <!-- رسائل Django -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+
+    <!-- بيانات الواجب -->
+    <div class="card">
+
+        <h1>
+            {{ homework.title }}
+        </h1>
+
+        <div class="info">
+
+            <p>
+                <strong>الطالب:</strong>
+                <span class="student-name">
+                    {{ student.student_name }}
+                </span>
+            </p>
+
+            <p>
+                <strong>المهارة:</strong>
+                {{ skill.name }}
+            </p>
+
+            {% if lesson %}
+                <p>
+                    <strong>الحصة:</strong>
+                    {{ lesson.title }}
+                </p>
+            {% endif %}
+
+            <p>
+                <strong>نوع الواجب:</strong>
+
+                {% if homework.homework_type == "electronic" %}
+                    إلكتروني
+                {% else %}
+                    ورقي
+                {% endif %}
+            </p>
+
+            <p>
+                <strong>الدرجة النهائية:</strong>
+                {{ homework.total_marks }}
+            </p>
+
+        </div>
+
+
+        <!-- وصف الواجب -->
+        {% if homework.description %}
+
+            <h2>
+                المطلوب في الواجب
+            </h2>
+
+            <div class="description">
+                {{ homework.description|linebreaks }}
+            </div>
+
+        {% endif %}
+
+
+        <!-- ملف الواجب الذي رفعه المعلم -->
+        {% if homework.file %}
+
+            <div class="homework-file">
+
+                <strong>
+                    ملف الواجب:
+                </strong>
+
+                <br><br>
+
+                <a
+                    href="{{ homework.file.url }}"
+                    target="_blank"
+                >
+                    📎 فتح ملف الواجب
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- حالة التسليم السابقة -->
+    {% if submission %}
+
+        <div class="card">
+
+            <h2>
+                حالة الواجب
+            </h2>
+
+            <div class="status">
+
+                {% if submission.status == "graded" %}
+
+                    ✅ تم تصحيح الواجب
+
+                {% elif submission.status == "submitted" %}
+
+                    📤 تم تسليم الواجب
+
+                {% else %}
+
+                    ⏳ حالة التسليم:
+                    {{ submission.status }}
+
+                {% endif %}
+
+                {% if submission.submitted_at %}
+
+                    <br><br>
+
+                    <strong>
+                        تاريخ التسليم:
+                    </strong>
+
+                    {{ submission.submitted_at|date:"Y-m-d H:i" }}
+
+                {% endif %}
+
+            </div>
+
+
+            {% if submission.uploaded_file %}
+
+                <div class="homework-file">
+
+                    <strong>
+                        الحل الذي تم رفعه:
+                    </strong>
+
+                    <br><br>
+
+                    <a
+                        href="{{ submission.uploaded_file.url }}"
+                        target="_blank"
+                    >
+                        📎 فتح الحل المرفوع
+                    </a>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- نتيجة الواجب -->
+    {% if result %}
+
+        <div class="card">
+
+            <h2>
+                نتيجة الواجب
+            </h2>
+
+            <div class="result">
+
+                {% if result.score is not None %}
+
+                    <p>
+                        <strong>
+                            الدرجة:
+                        </strong>
+
+                        {{ result.score }}
+                        /
+                        {{ homework.total_marks }}
+                    </p>
+
+                {% endif %}
+
+
+                {% if result.teacher_feedback %}
+
+                    <p>
+                        <strong>
+                            ملاحظات المعلم:
+                        </strong>
+                    </p>
+
+                    <div class="description">
+                        {{ result.teacher_feedback|linebreaks }}
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- رفع الحل -->
+    <div class="card">
+
+        <h2>
+            تسليم الحل
+        </h2>
+
+        {% if submission %}
+
+            <p class="warning">
+                يمكنك رفع الحل مرة أخرى إذا كنتِ تريدين استبدال الملف السابق.
+            </p>
+
+        {% else %}
+
+            <p>
+                ارفعي صورة أو فيديو للحل من جهازك.
+            </p>
+
+        {% endif %}
+
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            {% csrf_token %}
+
+            <div class="upload-box">
+
+                <label for="uploaded_file">
+                    <strong>
+                        اختاري صورة أو فيديو للحل
+                    </strong>
+                </label>
+
+                <input
+                    type="file"
+                    id="uploaded_file"
+                    name="uploaded_file"
+                    accept="image/*,video/*"
+                    required
+                >
+
+                <br>
+
+                <button type="submit">
+                    📤 تسليم الواجب
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>

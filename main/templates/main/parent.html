@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>ولي الأمر</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 17px;
+        }
+
+        .parent-box {
+            background: white;
+            max-width: 600px;
+            margin: 0 auto 30px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .parent-box h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #294a7c;
+        }
+
+        .submit-btn {
+            width: 100%;
+            border: none;
+            padding: 14px;
+            background: #294a7c;
+            color: white;
+            border-radius: 12px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .error {
+            background: #ffe5e5;
+            color: #b00020;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .students-title {
+            text-align: center;
+            margin: 35px 0 20px;
+        }
+
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(250px, 1fr)
+            );
+            gap: 20px;
+        }
+
+        .student-card {
+            background: white;
+            padding: 25px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            transition: 0.2s;
+        }
+
+        .student-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .student-name {
+            display: block;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #294a7c;
+            font-size: 22px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .student-name:hover {
+            color: #168a37;
+        }
+
+        .student-info {
+            margin: 12px 0;
+            color: #444;
+        }
+
+        .student-info strong {
+            color: #243f6b;
+        }
+
+        .student-link-text {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            color: #777;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .back-btn {
+            display: block;
+            width: fit-content;
+            margin: 30px auto 0;
+            padding: 12px 25px;
+            background: #eee;
+            color: #243f6b;
+            text-decoration: none;
+            border-radius: 10px;
+        }
+
+        .back-btn:hover {
+            background: #ddd;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- ============================= -->
+    <!-- العنوان -->
+    <!-- ============================= -->
+
+    <div class="header">
+
+        <h1>
+            👨‍👩‍👧 ولي الأمر
+        </h1>
+
+        <p>
+            اكتبي رقم ولي الأمر المسجل على المنصة
+            لمتابعة أبنائك
+        </p>
+
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- نموذج رقم ولي الأمر -->
+    <!-- ============================= -->
+
+    <div class="parent-box">
+
+        <h2>
+            بيانات ولي الأمر
+        </h2>
+
+
+        {% if error %}
+
+            <div class="error">
+                {{ error }}
+            </div>
+
+        {% endif %}
+
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+            <div class="form-group">
+
+                <label for="parent_phone">
+                    رقم تليفون ولي الأمر
+                </label>
+
+                <input
+                    type="tel"
+                    id="parent_phone"
+                    name="parent_phone"
+                    value="{{ parent_phone }}"
+                    placeholder="اكتب رقم التليفون"
+                    required
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="submit-btn"
+            >
+                عرض أبنائي
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- الطلاب -->
+    <!-- ============================= -->
+
+    {% if students %}
+
+        <h2 class="students-title">
+            أبنائي المسجلون على المنصة
+        </h2>
+
+
+        <div class="students-grid">
+
+            {% for student in students %}
+
+                <div class="student-card">
+
+                    <!-- اسم الطالب قابل للضغط -->
+
+                    <a
+                        href="{% url 'parent_student' student.id %}"
+                        class="student-name"
+                    >
+                        👤 {{ student.student_name }}
+                    </a>
+
+
+                    <!-- الصف -->
+
+                    <div class="student-info">
+
+                        <strong>
+                            الصف:
+                        </strong>
+
+                        {{ student.grade }}
+
+                    </div>
+
+
+                    <!-- نوع التعليم -->
+
+                    <div class="student-info">
+
+                        <strong>
+                            نوع التعليم:
+                        </strong>
+
+                        {{ student.school_type }}
+
+                    </div>
+
+
+                    <!-- رقم الطالب -->
+
+                    <div class="student-info">
+
+                        <strong>
+                            رقم الطالب:
+                        </strong>
+
+                        {{ student.student_phone }}
+
+                    </div>
+
+
+                    <!-- توضيح -->
+
+                    <div class="student-link-text">
+
+                        اضغطي على اسم الطالب
+                        لمتابعة المنهج والمهارات 👆
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- ============================= -->
+    <!-- العودة -->
+    <!-- ============================= -->
+
+    <a
+        href="{% url 'home' %}"
+        class="back-btn"
+    >
+        العودة للصفحة الرئيسية
+    </a>
+
+</div>
+
+</body>
+</html>

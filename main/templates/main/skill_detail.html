@@ -140,6 +140,78 @@
             color: #777;
         }
 
+        /* =========================
+           الواجب
+        ========================= */
+
+        .homework-box {
+            margin-top: 20px;
+            padding: 18px;
+            background: #fffaf0;
+            border: 1px solid #f0dfb5;
+            border-radius: 16px;
+        }
+
+        .homework-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #294a7c;
+            margin-bottom: 10px;
+        }
+
+        .homework-description {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .homework-file {
+            margin: 12px 0;
+        }
+
+        .homework-file a {
+            display: inline-block;
+            text-decoration: none;
+            color: #294a7c;
+            font-weight: bold;
+            background: #eef4ff;
+            padding: 10px 14px;
+            border-radius: 10px;
+        }
+
+        .homework-status {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            color: #555;
+        }
+
+        .submitted {
+            color: #237a36;
+            font-weight: bold;
+        }
+
+        .not-submitted {
+            color: #a35b00;
+            font-weight: bold;
+        }
+
+        .homework-btn {
+            display: inline-block;
+            margin-top: 12px;
+            text-decoration: none;
+            background: #294a7c;
+            color: white;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .homework-btn:hover {
+            opacity: 0.9;
+        }
+
         .empty {
             background: white;
             border-radius: 18px;
@@ -177,6 +249,11 @@
         ← العودة للمهارات
     </a>
 
+
+    <!-- =========================
+         بيانات المهارة
+    ========================= -->
+
     <div class="header">
 
         <h1>
@@ -192,9 +269,15 @@
         {% endif %}
 
         <div class="price">
+
             سعر الكورس:
-            {{ skill.course_price }} جنيه
+
+            {{ skill.course_price }}
+
+            جنيه
+
         </div>
+
 
         <div class="ai-box">
 
@@ -209,11 +292,244 @@
 
     </div>
 
+
+    <!-- =========================
+         دروس المهارة
+    ========================= -->
+
     <h2 class="lessons-title">
         📚 دروس المهارة
     </h2>
 
-    {% if lessons %}
+
+    {% if lesson_progress %}
+
+        <div class="lessons">
+
+            {% for item in lesson_progress %}
+
+                <div class="lesson-card">
+
+                    <!-- رقم الدرس -->
+
+                    <div class="lesson-number">
+
+                        الدرس {{ forloop.counter }}
+
+                    </div>
+
+
+                    <!-- اسم الدرس -->
+
+                    <div class="lesson-title">
+
+                        {{ item.lesson.title }}
+
+                    </div>
+
+
+                    <!-- وصف الدرس -->
+
+                    {% if item.lesson.description %}
+
+                        <div class="lesson-description">
+
+                            {{ item.lesson.description }}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =========================
+                         الفيديو
+                    ========================= -->
+
+                    {% if item.lesson.video %}
+
+                        <div class="video-box">
+
+                            <video
+                                controls
+                                controlsList="nodownload"
+                                playsinline
+                                preload="metadata"
+                            >
+
+                                <source
+                                    src="{{ item.lesson.video.url }}"
+                                    type="video/mp4"
+                                >
+
+                                المتصفح لا يدعم تشغيل الفيديو.
+
+                            </video>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="no-video">
+
+                            🎥 لم يتم إضافة فيديو لهذا الدرس حتى الآن.
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =========================
+                         الواجب المرتبط بالدرس
+                    ========================= -->
+
+                    {% if item.homeworks %}
+
+                        {% for homework_item in item.homeworks %}
+
+                            <div class="homework-box">
+
+                                <div class="homework-title">
+
+                                    📝 {{ homework_item.homework.title }}
+
+                                </div>
+
+
+                                {% if homework_item.homework.description %}
+
+                                    <div class="homework-description">
+
+                                        {{ homework_item.homework.description|linebreaks }}
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- ملف الواجب -->
+
+                                {% if homework_item.homework.file %}
+
+                                    <div class="homework-file">
+
+                                        <a
+                                            href="{{ homework_item.homework.file.url }}"
+                                            target="_blank"
+                                        >
+                                            📎 فتح ملف الواجب
+                                        </a>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- الدرجة -->
+
+                                {% if homework_item.homework.total_marks %}
+
+                                    <div>
+
+                                        <strong>
+                                            الدرجة النهائية:
+                                        </strong>
+
+                                        {{ homework_item.homework.total_marks }}
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- حالة التسليم -->
+
+                                <div class="homework-status">
+
+                                    {% if homework_item.submitted %}
+
+                                        <span class="submitted">
+
+                                            ✅ تم تسليم الواجب
+
+                                        </span>
+
+                                        {% if homework_item.submission.submitted_at %}
+
+                                            <br>
+
+                                            تاريخ التسليم:
+
+                                            {{ homework_item.submission.submitted_at|date:"Y-m-d H:i" }}
+
+                                        {% endif %}
+
+                                    {% else %}
+
+                                        <span class="not-submitted">
+
+                                            ⏳ لم يتم تسليم الواجب بعد
+
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- النتيجة -->
+
+                                {% if homework_item.result %}
+
+                                    <div class="homework-status">
+
+                                        📊
+
+                                        <strong>
+                                            نتيجة الواجب:
+                                        </strong>
+
+                                        {{ homework_item.result.score }}
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- زر الواجب -->
+
+                                <a
+                                    href="{% url 'skill_homework_detail' homework_item.homework.id %}"
+                                    class="homework-btn"
+                                >
+
+                                    {% if homework_item.submitted %}
+
+                                        👁️ عرض الواجب / تعديل الحل
+
+                                    {% else %}
+
+                                        📤 تسليم الواجب
+
+                                    {% endif %}
+
+                                </a>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+    {% elif lessons %}
+
+        <!-- احتياطي لو lesson_progress غير موجود -->
 
         <div class="lessons">
 
@@ -222,20 +538,28 @@
                 <div class="lesson-card">
 
                     <div class="lesson-number">
+
                         الدرس {{ forloop.counter }}
+
                     </div>
 
                     <div class="lesson-title">
+
                         {{ lesson.title }}
+
                     </div>
+
 
                     {% if lesson.description %}
 
                         <div class="lesson-description">
+
                             {{ lesson.description }}
+
                         </div>
 
                     {% endif %}
+
 
                     {% if lesson.video %}
 
@@ -262,7 +586,9 @@
                     {% else %}
 
                         <div class="no-video">
+
                             🎥 لم يتم إضافة فيديو لهذا الدرس حتى الآن.
+
                         </div>
 
                     {% endif %}
@@ -272,6 +598,7 @@
             {% endfor %}
 
         </div>
+
 
     {% else %}
 
@@ -287,6 +614,11 @@
         </div>
 
     {% endif %}
+
+
+    <!-- =========================
+         التواصل
+    ========================= -->
 
     <div class="support">
 

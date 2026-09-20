@@ -10,7 +10,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>المنهج</title>
+    <title>المنهج - منصتي التعليمية</title>
 
     <style>
 
@@ -38,29 +38,49 @@
             font-weight: bold;
         }
 
+        .back:hover {
+            text-decoration: underline;
+        }
+
+        /* ==============================
+           رأس الصفحة
+        ============================== */
+
         .header {
             background: white;
             border-radius: 24px;
             padding: 28px;
             margin-bottom: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
         }
 
         .header h1 {
-            margin: 0 0 10px;
+            margin: 0 0 18px;
             font-size: 30px;
         }
 
-        .header p {
-            margin: 5px 0;
+        .student-info {
+            background: #f7f9fd;
+            border-radius: 16px;
+            padding: 18px;
+            margin-top: 15px;
+        }
+
+        .student-info p {
+            margin: 8px 0;
             color: #666;
             line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .student-info strong {
+            color: #243f6b;
         }
 
         .status {
             display: inline-block;
-            margin-top: 12px;
-            padding: 7px 13px;
+            margin-top: 15px;
+            padding: 8px 14px;
             border-radius: 20px;
             background: #e7f8ed;
             color: #218838;
@@ -68,9 +88,22 @@
             font-weight: bold;
         }
 
+        .status-closed {
+            background: #fff0f0;
+            color: #a32f2f;
+        }
+
+        /* ==============================
+           عنوان المواد
+        ============================== */
+
         .section-title {
             margin: 0 0 15px;
         }
+
+        /* ==============================
+           كروت المواد
+        ============================== */
 
         .cards {
             display: grid;
@@ -85,7 +118,7 @@
             background: white;
             border-radius: 20px;
             padding: 22px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
         }
 
         .subject-icon {
@@ -130,6 +163,10 @@
             background: #1f3962;
         }
 
+        /* ==============================
+           كارت إضافة مادة
+        ============================== */
+
         .add-card {
             border: 2px dashed #294a7c;
         }
@@ -139,6 +176,10 @@
             color: #294a7c;
         }
 
+        /* ==============================
+           لا توجد مواد
+        ============================== */
+
         .empty {
             background: white;
             border-radius: 20px;
@@ -147,6 +188,23 @@
             color: #777;
             line-height: 1.9;
         }
+
+        /* ==============================
+           المنهج مغلق
+        ============================== */
+
+        .closed {
+            background: #fff0f0;
+            color: #a32f2f;
+            padding: 18px;
+            border-radius: 15px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        /* ==============================
+           الدعم
+        ============================== */
 
         .support {
             margin-top: 25px;
@@ -162,12 +220,8 @@
             font-weight: bold;
         }
 
-        .closed {
-            background: #fff0f0;
-            color: #a32f2f;
-            padding: 15px;
-            border-radius: 12px;
-            line-height: 1.8;
+        .support a:hover {
+            text-decoration: underline;
         }
 
     </style>
@@ -178,6 +232,11 @@
 
 <div class="container">
 
+
+    <!-- ==============================
+         العودة للرئيسية
+    ============================== -->
+
     <a
         href="{% url 'student_dashboard' %}"
         class="back"
@@ -186,9 +245,9 @@
     </a>
 
 
-    <!-- ========================================== -->
-    <!-- رأس الصفحة -->
-    <!-- ========================================== -->
+    <!-- ==============================
+         رأس صفحة المنهج
+    ============================== -->
 
     <div class="header">
 
@@ -196,52 +255,55 @@
             📚 المنهج
         </h1>
 
-        <p>
-            أهلاً
-            <strong>
-                {{ student.student_name }}
-            </strong>
-        </p>
 
-        <p>
+        <div class="student-info">
 
-            الصف:
+            <p>
+                أهلاً
+                <strong>
+                    {{ student.student_name }}
+                </strong>
+            </p>
 
-            <strong>
-                {{ student.get_grade_display }}
-            </strong>
 
-        </p>
+            <p>
+                الصف:
+                <strong>
+                    {{ student.grade }}
+                </strong>
+            </p>
 
-        <p>
 
-            نوع التعليم:
+            <p>
+                نوع التعليم:
+                <strong>
+                    {{ student.school_type }}
+                </strong>
+            </p>
 
-            <strong>
-                {{ student.get_school_type_display }}
-            </strong>
 
-        </p>
+            {% if curriculum_open %}
 
-        {% if curriculum_open %}
+                <span class="status">
+                    🔓 المنهج متاح
+                </span>
 
-            <span class="status">
-                🔓 المنهج متاح
-            </span>
+            {% else %}
 
-        {% else %}
+                <span class="status status-closed">
+                    🔒 المنهج غير متاح حاليًا
+                </span>
 
-            <span
-                class="status"
-                style="background:#fff0f0; color:#a32f2f;"
-            >
-                🔒 المنهج غير متاح حاليًا
-            </span>
+            {% endif %}
 
-        {% endif %}
+        </div>
 
     </div>
 
+
+    <!-- ==============================
+         لو المنهج غير متاح
+    ============================== -->
 
     {% if not curriculum_open %}
 
@@ -254,29 +316,40 @@
     {% else %}
 
 
-        <!-- ====================================== -->
-        <!-- المواد -->
-        <!-- ====================================== -->
+        <!-- ==============================
+             المواد المشترك فيها
+        ============================== -->
 
         <h2 class="section-title">
             📖 المواد المشترك فيها
         </h2>
 
+
         {% if subjects %}
 
             <div class="cards">
+
+
+                <!-- ==============================
+                     عرض المواد
+                ============================== -->
 
                 {% for subject in subjects %}
 
                     <div class="card">
 
+
                         <div class="subject-icon">
                             📘
                         </div>
 
+
                         <div class="subject-name">
                             {{ subject.name }}
                         </div>
+
+
+                        <!-- نوع الاشتراك -->
 
                         <div class="plan">
 
@@ -292,6 +365,9 @@
 
                         </div>
 
+
+                        <!-- عدد الحصص المتبقية -->
+
                         <div class="remaining">
 
                             {% if subject.plan_type == "full_term" %}
@@ -303,9 +379,11 @@
                                 {% if subject.remaining > 0 %}
 
                                     باقي لك
+
                                     <strong>
                                         {{ subject.remaining }}
                                     </strong>
+
                                     حصة في الاشتراك الحالي.
 
                                 {% else %}
@@ -319,6 +397,9 @@
 
                         </div>
 
+
+                        <!-- فتح المادة -->
+
                         <a
                             href="{% url 'subject_lessons' subject.name %}"
                             class="open-btn"
@@ -331,19 +412,22 @@
                 {% endfor %}
 
 
-                <!-- ================================= -->
-                <!-- إضافة مادة -->
-                <!-- ================================= -->
+                <!-- ==============================
+                     إضافة مادة
+                ============================== -->
 
                 <div class="card add-card">
+
 
                     <div class="subject-icon">
                         ➕
                     </div>
 
+
                     <div class="subject-name">
                         إضافة مادة
                     </div>
+
 
                     <div class="remaining">
 
@@ -356,6 +440,7 @@
 
                     </div>
 
+
                     <a
                         href="{% url 'add_content' %}"
                         class="open-btn"
@@ -367,7 +452,13 @@
 
             </div>
 
+
         {% else %}
+
+
+            <!-- ==============================
+                 لا توجد مواد
+            ============================== -->
 
             <div class="empty">
 
@@ -393,9 +484,9 @@
     {% endif %}
 
 
-    <!-- ========================================== -->
-    <!-- الدعم -->
-    <!-- ========================================== -->
+    <!-- ==============================
+         الدعم
+    ============================== -->
 
     <div class="support">
 
@@ -411,6 +502,7 @@
         </a>
 
     </div>
+
 
 </div>
 

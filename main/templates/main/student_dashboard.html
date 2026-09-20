@@ -2,20 +2,12 @@
 <html lang="ar" dir="rtl">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        لوحة الطالب - منصتي التعليمية
-    </title>
+    <title>لوحة الطالب - منصتي التعليمية</title>
 
     <style>
-
         * {
             box-sizing: border-box;
         }
@@ -39,28 +31,33 @@
             border-radius: 20px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
         }
 
+        /* الترحيب */
         .welcome {
             text-align: center;
         }
 
         .welcome h1 {
             margin-top: 0;
+            margin-bottom: 15px;
         }
 
         .info {
             color: #666;
             line-height: 2;
+            font-size: 16px;
         }
 
+        .info strong {
+            color: #243f6b;
+        }
+
+        /* الكروت */
         .grid {
             display: grid;
-            grid-template-columns: repeat(
-                auto-fit,
-                minmax(220px, 1fr)
-            );
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 18px;
         }
 
@@ -73,7 +70,7 @@
             border-radius: 20px;
             padding: 28px 20px;
             text-align: center;
-            transition: .2s;
+            transition: 0.2s;
         }
 
         .main-card:hover {
@@ -110,6 +107,7 @@
             background: #eafaf0;
         }
 
+        /* الحالة */
         .status {
             display: inline-block;
             margin-top: 8px;
@@ -129,6 +127,7 @@
             color: #b02a37;
         }
 
+        /* الإجازة */
         .vacation {
             background: #fff7e8;
             border-radius: 15px;
@@ -138,23 +137,40 @@
             text-align: center;
         }
 
+        /* بيانات الحساب */
         .account {
             line-height: 2;
         }
 
-        .logout {
-            display: block;
-            text-align: center;
-            color: #cf4b4b;
-            margin-top: 20px;
-            text-decoration: none;
-            font-weight: bold;
+        .account h2 {
+            margin-top: 0;
         }
 
+        .account p {
+            margin: 8px 0;
+        }
+
+        .account strong {
+            color: #243f6b;
+        }
+
+        /* الملاحظات */
         .note {
             text-align: center;
             color: #777;
             line-height: 1.8;
+        }
+
+        /* رسالة عدم التفعيل */
+        .pending-box {
+            background: #fff8e8;
+            border: 2px solid #f2d28b;
+            color: #7a5a00;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.9;
         }
 
         .closed-message {
@@ -166,46 +182,70 @@
             font-size: 14px;
         }
 
-    </style>
+        /* تسجيل الخروج */
+        .logout {
+            display: block;
+            text-align: center;
+            color: #cf4b4b;
+            margin-top: 20px;
+            text-decoration: none;
+            font-weight: bold;
+        }
 
+        .logout:hover {
+            text-decoration: underline;
+        }
+
+        /* موبايل */
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+
+            .box {
+                padding: 20px;
+            }
+
+            .welcome h1 {
+                font-size: 24px;
+            }
+
+            .main-icon {
+                font-size: 45px;
+            }
+        }
+    </style>
 </head>
+
 
 <body>
 
 <div class="container">
 
-
-    <!-- ============================================ -->
-    <!-- الترحيب -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
+    <!-- ترحيب بالطالب -->
+    <!-- ========================= -->
 
     <div class="box welcome">
 
         <h1>
-            👋 أهلاً
-            {{ student.student_name }}
+            👋 أهلاً {{ student.student_name }}
         </h1>
 
         <div class="info">
 
             <div>
-
                 الصف:
-
                 <strong>
-                    {{ student.get_grade_display }}
+                    {{ student.grade }}
                 </strong>
-
             </div>
 
             <div>
-
                 نوع التعليم:
-
                 <strong>
-                    {{ student.get_school_type_display }}
+                    {{ student.school_type }}
                 </strong>
-
             </div>
 
         </div>
@@ -213,159 +253,248 @@
     </div>
 
 
-    <!-- ============================================ -->
-    <!-- الإجازة -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
+    <!-- حالة الحساب لو مش مفعل -->
+    <!-- ========================= -->
 
-    {% if vacation %}
+    {% if not student.is_active %}
 
-        <div class="vacation">
+    <div class="pending-box">
 
-            📅 نحن حاليًا في فترة الإجازة.
+        <h2>⏳ الحساب في انتظار التفعيل</h2>
 
-            <br><br>
+        <p>
+            أهلاً {{ student.student_name }} ❤️
+        </p>
 
-            {% if curriculum_open %}
+        <p>
+            تم إنشاء حسابك بنجاح، ولكن الحساب لم يتم تفعيله
+            حتى الآن.
+        </p>
 
-                📚 المنهج متاح حاليًا.
+        {% if pending_request %}
 
-            {% else %}
+        <p>
+            طلب الاشتراك الخاص بك قيد المراجعة من إدارة المنصة.
+        </p>
 
-                📚 المنهج غير متاح حاليًا.
+        {% else %}
 
-            {% endif %}
+        <p>
+            من فضلك أكملي الاشتراك حتى يتم تفعيل حسابك.
+        </p>
 
-            <br>
+        {% endif %}
 
-            {% if skills_open %}
-
-                💻 المهارات متاحة حاليًا.
-
-            {% else %}
-
-                💻 المهارات غير متاحة حاليًا.
-
-            {% endif %}
-
-        </div>
+    </div>
 
     {% endif %}
 
 
-    <!-- ============================================ -->
+    <!-- ========================= -->
+    <!-- الإجازة -->
+    <!-- ========================= -->
+
+    {% if vacation %}
+
+    <div class="vacation">
+
+        📅 نحن حاليًا في فترة الإجازة.
+
+        <br>
+        <br>
+
+        {% if curriculum_open %}
+            📚 المنهج متاح حاليًا.
+        {% else %}
+            📚 المنهج غير متاح حاليًا.
+        {% endif %}
+
+        <br>
+
+        {% if skills_open %}
+            💻 المهارات متاحة حاليًا.
+        {% else %}
+            💻 المهارات غير متاحة حاليًا.
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ========================= -->
     <!-- الكروت الرئيسية -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
 
     <div class="box">
 
         <div class="grid">
 
 
+            <!-- ================= -->
             <!-- المنهج -->
+            <!-- ================= -->
 
             {% if curriculum_open %}
 
-                <a
-                    href="{% url 'curriculum_page' %}"
-                    class="main-card curriculum-card"
-                >
+            <a
+                href="{% url 'curriculum_page' %}"
+                class="main-card curriculum-card"
+            >
 
-                    <div class="main-icon">
-                        📚
-                    </div>
+                <div class="main-icon">
+                    📚
+                </div>
 
-                    <h2>
-                        المنهج
-                    </h2>
+                <h2>
+                    المنهج
+                </h2>
 
-                    <p>
-                        المواد الدراسية التي تم تفعيلها لك.
-                    </p>
+                <p>
+                    أهلاً {{ student.student_name }}
+                    <br>
 
-                    <span class="status status-open">
-                        🔓 متاح
-                    </span>
+                    الصف:
+                    {{ student.grade }}
 
-                </a>
+                    <br>
+
+                    نوع التعليم:
+                    {{ student.school_type }}
+
+                    <br><br>
+
+                    المواد الدراسية التي تم تفعيلها لك.
+                </p>
+
+                <span class="status status-open">
+                    🔓 المنهج متاح
+                </span>
+
+            </a>
 
             {% else %}
 
-                <div class="main-card curriculum-card">
+            <div class="main-card curriculum-card">
 
-                    <div class="main-icon">
-                        📚
-                    </div>
-
-                    <h2>
-                        المنهج
-                    </h2>
-
-                    <p>
-                        المنهج غير متاح حاليًا.
-                    </p>
-
-                    <span class="status status-closed">
-                        🔒 غير متاح
-                    </span>
-
+                <div class="main-icon">
+                    📚
                 </div>
+
+                <h2>
+                    المنهج
+                </h2>
+
+                <p>
+                    أهلاً {{ student.student_name }}
+                    <br>
+
+                    الصف:
+                    {{ student.grade }}
+
+                    <br>
+
+                    نوع التعليم:
+                    {{ student.school_type }}
+
+                    <br><br>
+
+                    المنهج غير متاح حاليًا.
+                </p>
+
+                <span class="status status-closed">
+                    🔒 غير متاح
+                </span>
+
+            </div>
 
             {% endif %}
 
 
+            <!-- ================= -->
             <!-- المهارات -->
+            <!-- ================= -->
 
             {% if skills_open %}
 
-                <a
-                    href="{% url 'skills_page' %}"
-                    class="main-card skills-card"
-                >
+            <a
+                href="{% url 'skills_page' %}"
+                class="main-card skills-card"
+            >
 
-                    <div class="main-icon">
-                        💻
-                    </div>
+                <div class="main-icon">
+                    💻
+                </div>
 
-                    <h2>
-                        المهارات
-                    </h2>
+                <h2>
+                    المهارات
+                </h2>
 
-                    <p>
-                        المهارات والكورسات التي تم تفعيلها لك.
-                    </p>
+                <p>
+                    أهلاً {{ student.student_name }}
+                    <br>
 
-                    <span class="status status-open">
-                        🔓 متاحة
-                    </span>
+                    الصف:
+                    {{ student.grade }}
 
-                </a>
+                    <br>
+
+                    نوع التعليم:
+                    {{ student.school_type }}
+
+                    <br><br>
+
+                    المهارات والكورسات التي تم تفعيلها لك.
+                </p>
+
+                <span class="status status-open">
+                    🔓 المهارات متاحة
+                </span>
+
+            </a>
 
             {% else %}
 
-                <div class="main-card skills-card">
+            <div class="main-card skills-card">
 
-                    <div class="main-icon">
-                        💻
-                    </div>
-
-                    <h2>
-                        المهارات
-                    </h2>
-
-                    <p>
-                        المهارات غير متاحة حاليًا.
-                    </p>
-
-                    <span class="status status-closed">
-                        🔒 غير متاحة
-                    </span>
-
+                <div class="main-icon">
+                    💻
                 </div>
+
+                <h2>
+                    المهارات
+                </h2>
+
+                <p>
+                    أهلاً {{ student.student_name }}
+                    <br>
+
+                    الصف:
+                    {{ student.grade }}
+
+                    <br>
+
+                    نوع التعليم:
+                    {{ student.school_type }}
+
+                    <br><br>
+
+                    المهارات غير متاحة حاليًا.
+                </p>
+
+                <span class="status status-closed">
+                    🔒 غير متاحة
+                </span>
+
+            </div>
 
             {% endif %}
 
 
+            <!-- ================= -->
             <!-- الذكاء الاصطناعي -->
+            <!-- ================= -->
 
             <div class="main-card ai-card">
 
@@ -378,8 +507,24 @@
                 </h2>
 
                 <p>
+
+                    أهلاً {{ student.student_name }}
+
+                    <br>
+
+                    الصف:
+                    {{ student.grade }}
+
+                    <br>
+
+                    نوع التعليم:
+                    {{ student.school_type }}
+
+                    <br><br>
+
                     المساعد متاح من داخل المادة
                     أو المهارة المفعلة لك.
+
                 </p>
 
                 <span class="status status-open">
@@ -389,7 +534,9 @@
             </div>
 
 
+            <!-- ================= -->
             <!-- واتساب -->
+            <!-- ================= -->
 
             <a
                 href="{{ support_whatsapp }}"
@@ -406,7 +553,15 @@
                 </h2>
 
                 <p>
-                    تواصلي مع المنصة عند الحاجة.
+
+                    أهلاً {{ student.student_name }}
+
+                    <br>
+
+                    لو محتاجة مساعدة
+                    أو عندك مشكلة في الحساب،
+                    تواصلي مع المنصة.
+
                 </p>
 
                 <span class="status status-open">
@@ -415,14 +570,15 @@
 
             </a>
 
+
         </div>
 
     </div>
 
 
-    <!-- ============================================ -->
-    <!-- الحساب -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
+    <!-- بيانات الحساب -->
+    <!-- ========================= -->
 
     <div class="box account">
 
@@ -431,51 +587,58 @@
         </h2>
 
         <p>
-
             اسم الطالب:
-
             <strong>
                 {{ student.student_name }}
             </strong>
-
         </p>
 
         <p>
-
             الصف:
-
             <strong>
-                {{ student.get_grade_display }}
+                {{ student.grade }}
             </strong>
-
         </p>
 
         <p>
-
             نوع التعليم:
-
             <strong>
-                {{ student.get_school_type_display }}
+                {{ student.school_type }}
             </strong>
-
         </p>
 
         <p>
+            رقم الطالب:
+            <strong>
+                {{ student.student_phone }}
+            </strong>
+        </p>
 
+        <p>
             حالة الحساب:
 
-            <strong>
-                مفعل ✅
-            </strong>
+            {% if student.is_active %}
+
+                <strong>
+                    مفعل ✅
+                </strong>
+
+            {% else %}
+
+                <strong>
+                    في انتظار التفعيل ⏳
+                </strong>
+
+            {% endif %}
 
         </p>
 
     </div>
 
 
-    <!-- ============================================ -->
+    <!-- ========================= -->
     <!-- ملاحظة -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
 
     <div class="box note">
 
@@ -486,17 +649,19 @@
         ادخلي إلى المادة أو المهارة المفعلة،
         وستجدي المساعد بداخلها.
 
-        <br><br>
+        <br>
+        <br>
 
         المساعد الحالي موجود داخل المنصة،
-        لكن ربطه بمزود AI حقيقي يحتاج API ومفتاح مزود الخدمة.
+        لكن ربطه بمزود AI حقيقي يحتاج API
+        ومفتاح مزود الخدمة.
 
     </div>
 
 
-    <!-- ============================================ -->
+    <!-- ========================= -->
     <!-- تسجيل الخروج -->
-    <!-- ============================================ -->
+    <!-- ========================= -->
 
     <a
         class="logout"
@@ -509,5 +674,4 @@
 </div>
 
 </body>
-
 </html>

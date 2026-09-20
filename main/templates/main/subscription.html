@@ -34,7 +34,7 @@
             background: white;
             border-radius: 22px;
             padding: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             margin-bottom: 25px;
         }
 
@@ -53,7 +53,7 @@
             border-radius: 22px;
             padding: 25px;
             margin-bottom: 22px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
         }
 
         .box h2 {
@@ -121,6 +121,11 @@
             transform: translateY(-2px);
         }
 
+        .option-card:has(input:checked) {
+            border-color: #294a7c;
+            background: #f4f7fc;
+        }
+
         .option-card input {
             margin-left: 8px;
         }
@@ -134,6 +139,13 @@
         .price {
             color: #294a7c;
             font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .price-description {
+            color: #777;
+            font-size: 13px;
+            margin-top: 5px;
         }
 
         .skills-list {
@@ -149,6 +161,16 @@
             border: 2px solid #e3e7ef;
             border-radius: 16px;
             padding: 18px;
+            transition: 0.2s;
+        }
+
+        .skill-card:hover {
+            border-color: #294a7c;
+        }
+
+        .skill-card:has(input:checked) {
+            border-color: #294a7c;
+            background: #f4f7fc;
         }
 
         .skill-card label {
@@ -193,7 +215,7 @@
             display: flex;
             justify-content: space-between;
             gap: 15px;
-            padding: 8px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #dbe4f2;
         }
 
@@ -203,6 +225,7 @@
 
         .summary-total {
             font-size: 21px;
+            margin-top: 5px;
         }
 
         .submit-btn {
@@ -216,6 +239,7 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 20px;
+            transition: 0.2s;
         }
 
         .submit-btn:hover {
@@ -277,23 +301,30 @@
             font-weight: bold;
         }
 
-        .full-term-note {
-            background: #eef4ff;
-            border-radius: 14px;
-            padding: 15px;
-            line-height: 1.8;
-            margin-top: 10px;
-        }
-
         .support-link {
             color: #168a37;
             font-weight: bold;
             text-decoration: none;
         }
 
+        .mode-note {
+            background: #eef4ff;
+            border-radius: 14px;
+            padding: 15px;
+            line-height: 1.8;
+            margin-top: 15px;
+            color: #294a7c;
+        }
+
+        .file-input {
+            margin-top: 10px;
+            width: 100%;
+        }
+
     </style>
 
 </head>
+
 
 <body>
 
@@ -305,6 +336,11 @@
     >
         ← العودة للصفحة الرئيسية
     </a>
+
+
+    <!-- ====================================== -->
+    <!-- بيانات الطالب -->
+    <!-- ====================================== -->
 
     <div class="header">
 
@@ -335,6 +371,11 @@
 
     </div>
 
+
+    <!-- ====================================== -->
+    <!-- رسائل النجاح -->
+    <!-- ====================================== -->
+
     {% if success %}
 
         <div class="success">
@@ -360,6 +401,11 @@
 
     {% endif %}
 
+
+    <!-- ====================================== -->
+    <!-- رسالة الخطأ -->
+    <!-- ====================================== -->
+
     {% if error %}
 
         <div class="error">
@@ -367,6 +413,11 @@
         </div>
 
     {% endif %}
+
+
+    <!-- ====================================== -->
+    <!-- طلب قيد المراجعة -->
+    <!-- ====================================== -->
 
     {% if pending_request %}
 
@@ -382,6 +433,11 @@
         </div>
 
     {% endif %}
+
+
+    <!-- ====================================== -->
+    <!-- طلب مرفوض -->
+    <!-- ====================================== -->
 
     {% if rejected_request %}
 
@@ -418,6 +474,10 @@
     {% endif %}
 
 
+    <!-- ====================================== -->
+    <!-- الفورم -->
+    <!-- ====================================== -->
+
     <form
         method="post"
         enctype="multipart/form-data"
@@ -439,7 +499,9 @@
             <div class="type-options">
 
 
-                <!-- شهري -->
+                <!-- ================================ -->
+                <!-- اشتراك شهري -->
+                <!-- ================================ -->
 
                 <label class="type-card">
 
@@ -458,13 +520,16 @@
                     </strong>
 
                     <span>
-                        اختاري المواد التي تريدين الاشتراك فيها.
+                        اختاري المواد التي تريدين الاشتراك فيها،
+                        وكل مادة لها سعرها الشهري الخاص.
                     </span>
 
                 </label>
 
 
-                <!-- الترم -->
+                <!-- ================================ -->
+                <!-- اشتراك الترم -->
+                <!-- ================================ -->
 
                 {% if curriculum_open %}
 
@@ -481,11 +546,12 @@
                         >
 
                         <strong>
-                            اشتراك الترم كامل
+                            اشتراك الترم
                         </strong>
 
                         <span>
-                            يشمل جميع المواد المتاحة للصف.
+                            اختاري المواد التي تريدينها،
+                            وكل مادة لها سعر الترم الخاص بها.
                         </span>
 
                     </label>
@@ -493,7 +559,9 @@
                 {% endif %}
 
 
-                <!-- مهارات -->
+                <!-- ================================ -->
+                <!-- المهارات -->
+                <!-- ================================ -->
 
                 {% if skills_open %}
 
@@ -514,8 +582,8 @@
                         </strong>
 
                         <span>
-                            اشتراك المهارة للكورس كاملًا
-                            ولا ينتهي.
+                            اختاري المهارة أو المهارات
+                            التي تريدين الاشتراك فيها.
                         </span>
 
                     </label>
@@ -523,7 +591,9 @@
                 {% endif %}
 
 
+                <!-- ================================ -->
                 <!-- مواد + مهارات -->
+                <!-- ================================ -->
 
                 {% if curriculum_open and skills_open %}
 
@@ -544,7 +614,7 @@
                         </strong>
 
                         <span>
-                            اختاري مواد ومهارات معًا.
+                            اختاري المواد والمهارات معًا.
                         </span>
 
                     </label>
@@ -571,15 +641,15 @@
                     📚 المواد
                 </h2>
 
+
                 <div
-                    class="full-term-note"
-                    id="fullTermNote"
-                    style="display:none;"
+                    class="mode-note"
+                    id="subjectsModeNote"
                 >
-                    ✅ اشتراك الترم الكامل يشمل جميع
-                    المواد المتاحة تلقائيًا.
-                    لا تحتاجين لاختيار المواد يدويًا.
+                    اختاري المواد التي تريدين الاشتراك فيها.
+                    السعر يتغير حسب نوع الاشتراك.
                 </div>
+
 
                 {% if available_subjects %}
 
@@ -596,18 +666,37 @@
                                     type="checkbox"
                                     name="selected_subjects"
                                     value="{{ item.subject_name }}"
+                                    data-monthly-price="{{ item.monthly_price|default:0 }}"
+                                    data-term-price="{{ item.full_term_price|default:0 }}"
                                     {% if item.subject_name in selected_subjects %}
                                         checked
                                     {% endif %}
                                 >
 
+
                                 <div class="subject-name">
                                     {{ item.subject_name }}
                                 </div>
 
-                                <div class="price">
-                                    {{ monthly_subject_price }}
+
+                                <div
+                                    class="price subject-price"
+                                    data-monthly-price="{{ item.monthly_price|default:0 }}"
+                                    data-term-price="{{ item.full_term_price|default:0 }}"
+                                >
+                                    {{ item.monthly_price|default:0 }}
                                     جنيه شهريًا
+                                </div>
+
+
+                                <div class="price-description">
+
+                                    سعر الترم:
+
+                                    {{ item.full_term_price|default:0 }}
+
+                                    جنيه
+
                                 </div>
 
                             </label>
@@ -644,6 +733,7 @@
                     💡 المهارات
                 </h2>
 
+
                 {% if available_skills %}
 
                     <div class="skills-list">
@@ -658,33 +748,35 @@
                                         type="checkbox"
                                         name="selected_skills"
                                         value="{{ skill.id }}"
+                                        data-price="{{ skill.course_price|default:0 }}"
                                         {% if skill.name in selected_skills %}
                                             checked
                                         {% endif %}
                                     >
 
+
                                     <div class="skill-title">
-
                                         {{ skill.name }}
-
                                     </div>
 
-                                    <div class="price">
 
-                                        {{ skill.course_price }}
+                                    <div
+                                        class="price"
+                                        data-skill-price="{{ skill.course_price|default:0 }}"
+                                    >
+                                        {{ skill.course_price|default:0 }}
                                         جنيه
-
                                     </div>
+
 
                                     {% if skill.description %}
 
                                         <div class="skill-description">
-
                                             {{ skill.description }}
-
                                         </div>
 
                                     {% endif %}
+
 
                                     {% if skill.prerequisites.all %}
 
@@ -727,6 +819,7 @@
                 📸 إثبات التحويل
             </h2>
 
+
             <div class="payment">
 
                 <strong>
@@ -748,13 +841,16 @@
 
             </div>
 
+
             <br>
+
 
             <input
                 type="file"
                 name="transfer_image"
                 accept="image/*"
                 required
+                class="file-input"
             >
 
 
@@ -764,31 +860,45 @@
 
             <div class="summary">
 
-                <div class="summary-row">
-
-                    <span>
-                        سعر المادة شهريًا:
-                    </span>
-
-                    <strong>
-                        {{ monthly_subject_price }}
-                        جنيه
-                    </strong>
-
-                </div>
 
                 <div class="summary-row">
 
                     <span>
-                        سعر الترم الكامل:
+                        نوع الاشتراك:
                     </span>
 
-                    <strong>
-                        {{ full_term_price }}
-                        جنيه
+                    <strong id="selectedPlanText">
+                        شهري
                     </strong>
 
                 </div>
+
+
+                <div class="summary-row">
+
+                    <span>
+                        عدد المواد:
+                    </span>
+
+                    <strong id="subjectsCount">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-row">
+
+                    <span>
+                        عدد المهارات:
+                    </span>
+
+                    <strong id="skillsCount">
+                        0
+                    </strong>
+
+                </div>
+
 
                 <div class="summary-row summary-total">
 
@@ -797,14 +907,17 @@
                     </span>
 
                     <strong id="totalAmount">
-                        {{ total_amount|default:"0" }}
-                        جنيه
+                        0 جنيه
                     </strong>
 
                 </div>
 
             </div>
 
+
+            <!-- ================================== -->
+            <!-- إرسال الطلب -->
+            <!-- ================================== -->
 
             <button
                 type="submit"
@@ -820,318 +933,431 @@
 </div>
 
 
+<!-- ====================================== -->
+<!-- JavaScript -->
+<!-- ====================================== -->
+
 <script>
 
-    const monthlyPrice =
-        Number("{{ monthly_subject_price|default:0 }}");
-
-    const fullTermPrice =
-        Number("{{ full_term_price|default:0 }}");
-
-
-    function changeSubscriptionType() {
+    function getSelectedPlan() {
 
         const selected = document.querySelector(
             'input[name="plan"]:checked'
         );
 
         if (!selected) {
-            return;
+            return "monthly";
         }
 
-        const plan = selected.value;
+        return selected.value;
+    }
+
+
+    function changeSubscriptionType() {
+
+        const plan = getSelectedPlan();
+
 
         const subjectsBox =
-            document.getElementById(
-                "subjectsBox"
-            );
+            document.getElementById("subjectsBox");
+
 
         const skillsBox =
-            document.getElementById(
-                "skillsBox"
-            );
+            document.getElementById("skillsBox");
+
 
         const subjectOptions =
-            document.getElementById(
-                "subjectOptions"
-            );
+            document.getElementById("subjectOptions");
 
-        const fullTermNote =
-            document.getElementById(
-                "fullTermNote"
-            );
+
+        const subjectsModeNote =
+            document.getElementById("subjectsModeNote");
+
 
         /*
-         * إظهار وإخفاء الأقسام
+         * ======================================
+         * إظهار قسم المواد
+         * ======================================
          */
 
         if (subjectsBox) {
 
             if (plan === "skills") {
 
-                subjectsBox.style.display =
-                    "none";
+                subjectsBox.style.display = "none";
 
             } else {
 
-                subjectsBox.style.display =
-                    "block";
+                subjectsBox.style.display = "block";
+
             }
+
         }
 
+
+        /*
+         * ======================================
+         * إظهار قسم المهارات
+         * ======================================
+         */
 
         if (skillsBox) {
 
             if (
-                plan === "monthly"
-                || plan === "full_term"
+                plan === "monthly" ||
+                plan === "full_term"
             ) {
 
-                skillsBox.style.display =
-                    "none";
+                skillsBox.style.display = "none";
 
             } else {
 
-                skillsBox.style.display =
-                    "block";
+                skillsBox.style.display = "block";
+
             }
+
         }
 
 
         /*
-         * الترم الكامل:
-         * لا يوجد اختيار يدوي للمواد
+         * ======================================
+         * تغيير أسعار المواد
+         * ======================================
          */
 
         if (subjectOptions) {
 
-            if (plan === "full_term") {
+            const subjectCards =
+                subjectOptions.querySelectorAll(
+                    ".option-card"
+                );
 
-                subjectOptions.style.display =
-                    "none";
 
-                if (fullTermNote) {
+            subjectCards.forEach(function(card) {
 
-                    fullTermNote.style.display =
-                        "block";
+                const checkbox =
+                    card.querySelector(
+                        'input[name="selected_subjects"]'
+                    );
+
+
+                const priceElement =
+                    card.querySelector(".subject-price");
+
+
+                if (!checkbox || !priceElement) {
+                    return;
                 }
 
-            } else {
 
-                subjectOptions.style.display =
-                    "grid";
+                const monthlyPrice =
+                    Number(
+                        checkbox.dataset.monthlyPrice || 0
+                    );
 
-                if (fullTermNote) {
 
-                    fullTermNote.style.display =
-                        "none";
+                const termPrice =
+                    Number(
+                        checkbox.dataset.termPrice || 0
+                    );
+
+
+                if (plan === "full_term") {
+
+                    priceElement.textContent =
+                        termPrice + " جنيه للترم";
+
+                } else {
+
+                    priceElement.textContent =
+                        monthlyPrice + " جنيه شهريًا";
+
                 }
-            }
+
+            });
+
         }
 
 
         /*
-         * لو دخلت على مهارات فقط
-         * نمسح اختيار المواد السابق
+         * ======================================
+         * وصف قسم المواد
+         * ======================================
+         */
+
+        if (subjectsModeNote) {
+
+            if (plan === "full_term") {
+
+                subjectsModeNote.textContent =
+                    "اختاري المواد التي تريدينها. كل مادة لها سعر الترم الخاص بها.";
+
+            } else if (plan === "mixed") {
+
+                subjectsModeNote.textContent =
+                    "اختاري المواد والمهارات التي تريدين الاشتراك فيها. المواد هنا تُحسب بالسعر الشهري.";
+
+            } else {
+
+                subjectsModeNote.textContent =
+                    "اختاري المواد التي تريدين الاشتراك فيها. كل مادة لها سعرها الشهري الخاص.";
+
+            }
+
+        }
+
+
+        /*
+         * ======================================
+         * لو الاشتراك مهارات فقط
+         * نمسح المواد
+         * ======================================
          */
 
         if (
-            plan === "skills"
-            && subjectOptions
+            plan === "skills" &&
+            subjectOptions
         ) {
 
             subjectOptions
                 .querySelectorAll(
-                    'input[type="checkbox"]'
+                    'input[name="selected_subjects"]'
                 )
-                .forEach(
-                    function(checkbox) {
-                        checkbox.checked = false;
-                    }
-                );
+                .forEach(function(checkbox) {
+
+                    checkbox.checked = false;
+
+                });
+
         }
 
 
         /*
-         * لو دخلت على مواد أو ترم
-         * نمسح اختيار المهارات السابق
+         * ======================================
+         * لو الاشتراك شهري أو ترم
+         * نمسح المهارات
+         * ======================================
          */
 
         if (
             (
-                plan === "monthly"
-                || plan === "full_term"
-            )
-            && skillsBox
+                plan === "monthly" ||
+                plan === "full_term"
+            ) &&
+            skillsBox
         ) {
 
             skillsBox
                 .querySelectorAll(
-                    'input[type="checkbox"]'
+                    'input[name="selected_skills"]'
                 )
-                .forEach(
-                    function(checkbox) {
-                        checkbox.checked = false;
-                    }
-                );
+                .forEach(function(checkbox) {
+
+                    checkbox.checked = false;
+
+                });
+
         }
 
-        calculateTotal();
+
+        updateSummary();
 
     }
 
 
-    function calculateTotal() {
+    function calculateSubjectsTotal(plan) {
 
-        const selected = document.querySelector(
-            'input[name="plan"]:checked'
-        );
+        let total = 0;
 
-        if (!selected) {
-            return;
-        }
 
-        const plan = selected.value;
+        const selectedSubjects =
+            document.querySelectorAll(
+                'input[name="selected_subjects"]:checked'
+            );
+
+
+        selectedSubjects.forEach(function(checkbox) {
+
+            let price = 0;
+
+
+            if (plan === "full_term") {
+
+                price =
+                    Number(
+                        checkbox.dataset.termPrice || 0
+                    );
+
+            } else {
+
+                price =
+                    Number(
+                        checkbox.dataset.monthlyPrice || 0
+                    );
+
+            }
+
+
+            total += price;
+
+        });
+
+
+        return total;
+
+    }
+
+
+    function calculateSkillsTotal() {
+
+        let total = 0;
+
+
+        const selectedSkills =
+            document.querySelectorAll(
+                'input[name="selected_skills"]:checked'
+            );
+
+
+        selectedSkills.forEach(function(checkbox) {
+
+            const price =
+                Number(
+                    checkbox.dataset.price || 0
+                );
+
+
+            total += price;
+
+        });
+
+
+        return total;
+
+    }
+
+
+    function updateSummary() {
+
+        const plan =
+            getSelectedPlan();
+
 
         let total = 0;
 
 
         /*
-         * الترم الكامل
+         * ======================================
+         * حساب المواد
+         * ======================================
          */
+
+        if (
+            plan === "monthly" ||
+            plan === "full_term" ||
+            plan === "mixed"
+        ) {
+
+            total +=
+                calculateSubjectsTotal(plan);
+
+        }
+
+
+        /*
+         * ======================================
+         * حساب المهارات
+         * ======================================
+         */
+
+        if (
+            plan === "skills" ||
+            plan === "mixed"
+        ) {
+
+            total +=
+                calculateSkillsTotal();
+
+        }
+
+
+        /*
+         * ======================================
+         * عدد المواد
+         * ======================================
+         */
+
+        const subjectsCount =
+            document.querySelectorAll(
+                'input[name="selected_subjects"]:checked'
+            ).length;
+
+
+        /*
+         * ======================================
+         * عدد المهارات
+         * ======================================
+         */
+
+        const skillsCount =
+            document.querySelectorAll(
+                'input[name="selected_skills"]:checked'
+            ).length;
+
+
+        /*
+         * ======================================
+         * اسم نوع الاشتراك
+         * ======================================
+         */
+
+        let planText = "شهري";
+
 
         if (plan === "full_term") {
 
-            total = fullTermPrice;
+            planText = "ترم";
+
+        } else if (plan === "skills") {
+
+            planText = "مهارات";
+
+        } else if (plan === "mixed") {
+
+            planText = "مواد + مهارات";
 
         }
 
 
         /*
-         * الاشتراك الشهري
+         * ======================================
+         * عناصر العرض
+         * ======================================
          */
-
-        else if (plan === "monthly") {
-
-            document
-                .querySelectorAll(
-                    'input[name="selected_subjects"]:checked'
-                )
-                .forEach(
-                    function() {
-                        total += monthlyPrice;
-                    }
-                );
-
-        }
-
-
-        /*
-         * مهارات
-         */
-
-        else if (plan === "skills") {
-
-            document
-                .querySelectorAll(
-                    'input[name="selected_skills"]:checked'
-                )
-                .forEach(
-                    function(checkbox) {
-
-                        const card =
-                            checkbox.closest(
-                                ".skill-card"
-                            );
-
-                        if (!card) {
-                            return;
-                        }
-
-                        const priceElement =
-                            card.querySelector(
-                                ".price"
-                            );
-
-                        if (!priceElement) {
-                            return;
-                        }
-
-                        const value =
-                            parseFloat(
-                                priceElement.textContent
-                            );
-
-                        if (!isNaN(value)) {
-                            total += value;
-                        }
-
-                    }
-                );
-
-        }
-
-
-        /*
-         * مواد + مهارات
-         */
-
-        else if (plan === "mixed") {
-
-            document
-                .querySelectorAll(
-                    'input[name="selected_subjects"]:checked'
-                )
-                .forEach(
-                    function() {
-                        total += monthlyPrice;
-                    }
-                );
-
-            document
-                .querySelectorAll(
-                    'input[name="selected_skills"]:checked'
-                )
-                .forEach(
-                    function(checkbox) {
-
-                        const card =
-                            checkbox.closest(
-                                ".skill-card"
-                            );
-
-                        if (!card) {
-                            return;
-                        }
-
-                        const priceElement =
-                            card.querySelector(
-                                ".price"
-                            );
-
-                        if (!priceElement) {
-                            return;
-                        }
-
-                        const value =
-                            parseFloat(
-                                priceElement.textContent
-                            );
-
-                        if (!isNaN(value)) {
-                            total += value;
-                        }
-
-                    }
-                );
-
-        }
-
 
         const totalElement =
             document.getElementById(
                 "totalAmount"
             );
+
+
+        const subjectsCountElement =
+            document.getElementById(
+                "subjectsCount"
+            );
+
+
+        const skillsCountElement =
+            document.getElementById(
+                "skillsCount"
+            );
+
+
+        const selectedPlanTextElement =
+            document.getElementById(
+                "selectedPlanText"
+            );
+
 
         if (totalElement) {
 
@@ -1140,29 +1366,92 @@
 
         }
 
+
+        if (subjectsCountElement) {
+
+            subjectsCountElement.textContent =
+                subjectsCount;
+
+        }
+
+
+        if (skillsCountElement) {
+
+            skillsCountElement.textContent =
+                skillsCount;
+
+        }
+
+
+        if (selectedPlanTextElement) {
+
+            selectedPlanTextElement.textContent =
+                planText;
+
+        }
+
     }
 
+
+    /*
+     * ======================================
+     * تشغيل الصفحة
+     * ======================================
+     */
 
     document.addEventListener(
         "DOMContentLoaded",
         function() {
 
+
+            /*
+             * تطبيق نوع الاشتراك الحالي
+             */
+
             changeSubscriptionType();
+
+
+            /*
+             * متابعة تغيير المواد
+             */
 
             document
                 .querySelectorAll(
-                    'input[type="checkbox"]'
+                    'input[name="selected_subjects"]'
                 )
-                .forEach(
-                    function(checkbox) {
+                .forEach(function(checkbox) {
 
-                        checkbox.addEventListener(
-                            "change",
-                            calculateTotal
-                        );
+                    checkbox.addEventListener(
+                        "change",
+                        updateSummary
+                    );
 
-                    }
-                );
+                });
+
+
+            /*
+             * متابعة تغيير المهارات
+             */
+
+            document
+                .querySelectorAll(
+                    'input[name="selected_skills"]'
+                )
+                .forEach(function(checkbox) {
+
+                    checkbox.addEventListener(
+                        "change",
+                        updateSummary
+                    );
+
+                });
+
+
+            /*
+             * الحساب الأولي
+             */
+
+            updateSummary();
 
         }
     );

@@ -11,80 +11,358 @@
     >
 
     <title>
-        الأسعار
+        أسعار المنصة
     </title>
 
     <style>
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+
             margin: 0;
+
             padding: 25px;
+
             background: #f4f8ff;
-            font-family: Arial, sans-serif;
+
+            font-family:
+                Arial,
+                Tahoma,
+                sans-serif;
+
             color: #243f6b;
         }
 
+
         .container {
-            max-width: 1000px;
+
+            max-width: 1100px;
+
             margin: auto;
         }
 
+
         .box {
+
             background: white;
-            border-radius: 20px;
+
+            border-radius: 22px;
+
             padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,.06);
+
+            margin-bottom: 25px;
+
+            box-shadow:
+                0 8px 25px rgba(0, 0, 0, 0.06);
         }
 
+
+        .main-title {
+
+            text-align: center;
+
+            margin-top: 0;
+
+            font-size: 32px;
+
+            color: #294a7c;
+        }
+
+
+        .subtitle {
+
+            text-align: center;
+
+            color: #777;
+
+            margin-bottom: 30px;
+        }
+
+
+        .grade-box {
+
+            background: #f8fbff;
+
+            border: 1px solid #e3ecfa;
+
+            border-radius: 20px;
+
+            padding: 20px;
+
+            margin-bottom: 25px;
+        }
+
+
+        .grade-title {
+
+            margin-top: 0;
+
+            margin-bottom: 20px;
+
+            color: #294a7c;
+
+            font-size: 25px;
+        }
+
+
+        .type-title {
+
+            margin-top: 25px;
+
+            margin-bottom: 15px;
+
+            color: #3475df;
+
+            font-size: 20px;
+        }
+
+
         .grid {
+
             display: grid;
-            grid-template-columns: repeat(
-                auto-fit,
-                minmax(220px, 1fr)
-            );
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(220px, 1fr)
+                );
+
             gap: 15px;
         }
 
+
         .card {
-            background: #f7f9fd;
+
+            background: white;
+
+            border-radius: 17px;
+
             padding: 20px;
-            border-radius: 15px;
+
+            border: 1px solid #e5ebf5;
+
+            transition: 0.2s;
         }
 
-        .skill {
-            background: #f7efff;
+
+        .card:hover {
+
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.07);
         }
+
+
+        .subject-name {
+
+            margin-top: 0;
+
+            margin-bottom: 15px;
+
+            color: #243f6b;
+
+            font-size: 21px;
+        }
+
+
+        .price-row {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 10px 0;
+
+            border-bottom:
+                1px solid #edf1f7;
+        }
+
+
+        .price-row:last-child {
+
+            border-bottom: none;
+        }
+
+
+        .price-label {
+
+            color: #777;
+
+            font-size: 14px;
+        }
+
 
         .price {
-            font-size: 24px;
+
+            font-size: 19px;
+
             font-weight: bold;
+
+            color: #294a7c;
+
+            white-space: nowrap;
+        }
+
+
+        .empty {
+
+            background: #fff8e8;
+
+            border-radius: 15px;
+
+            padding: 15px;
+
+            color: #856404;
+
+            text-align: center;
+
             margin-top: 10px;
         }
 
+
+        .skills-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(220px, 1fr)
+                );
+
+            gap: 15px;
+        }
+
+
+        .skill-card {
+
+            background: #f7efff;
+
+            border: 1px solid #eadcff;
+
+            border-radius: 17px;
+
+            padding: 20px;
+        }
+
+
+        .skill-card h3 {
+
+            margin-top: 0;
+
+            color: #5b3b8a;
+        }
+
+
+        .skill-price {
+
+            font-size: 24px;
+
+            font-weight: bold;
+
+            color: #5b3b8a;
+
+            margin-top: 15px;
+        }
+
+
+        .skill-note {
+
+            color: #777;
+
+            font-size: 14px;
+
+            margin-bottom: 0;
+        }
+
+
         .back {
+
             display: block;
+
             text-align: center;
+
             color: #3475df;
+
             text-decoration: none;
+
+            font-size: 17px;
+
+            margin-top: 25px;
+        }
+
+
+        .back:hover {
+
+            text-decoration: underline;
+        }
+
+
+        @media (max-width: 600px) {
+
+            body {
+
+                padding: 12px;
+            }
+
+
+            .box {
+
+                padding: 18px;
+            }
+
+
+            .main-title {
+
+                font-size: 26px;
+            }
+
+
+            .grade-title {
+
+                font-size: 22px;
+            }
         }
 
     </style>
 
 </head>
 
+
 <body>
+
 
 <div class="container">
 
+
+    <!-- ========================= -->
+    <!-- العنوان -->
+    <!-- ========================= -->
+
     <div class="box">
 
-        <h1>
+        <h1 class="main-title">
             💰 أسعار المنصة
         </h1>
 
+        <p class="subtitle">
+            اختاري الصف ونوع التعليم لمعرفة المواد والأسعار
+        </p>
+
     </div>
 
+
+    <!-- ========================= -->
+    <!-- أسعار المنهج -->
+    <!-- ========================= -->
 
     <div class="box">
 
@@ -92,98 +370,313 @@
             📚 أسعار المنهج
         </h2>
 
-        <div class="grid">
 
-            {% for grade in grades %}
-
-                {% if grade.is_active %}
-
-                    <div class="card">
-
-                        <h3>
-                            {{ grade.grade }}
-                        </h3>
-
-                        <p>
-                            المادة شهريًا:
-                        </p>
-
-                        <div class="price">
-                            {{ grade.monthly_subject_price }}
-                            جنيه
-                        </div>
-
-                        <p>
-                            الترم كامل:
-                        </p>
-
-                        <div class="price">
-                            {{ grade.full_term_price }}
-                            جنيه
-                        </div>
-
-                    </div>
-
-                {% endif %}
-
-            {% endfor %}
-
-        </div>
-
-    </div>
+        {% if grade_data %}
 
 
-    <div class="box">
+            {% for item in grade_data %}
 
-        <h2>
-            💻 أسعار المهارات
-        </h2>
 
-        <div class="grid">
+                <div class="grade-box">
 
-            {% for skill in skills %}
 
-                <div class="card skill">
+                    <h3 class="grade-title">
 
-                    <h3>
-                        {{ skill.name }}
+                        🎓 {{ item.grade.grade }}
+
                     </h3>
 
-                    <div class="price">
 
-                        {{ skill.course_price }}
+                    <!-- ========================= -->
+                    <!-- عربي -->
+                    <!-- ========================= -->
 
-                        جنيه
+                    {% if item.arabic_subjects %}
 
-                    </div>
+                        <h4 class="type-title">
 
-                    <p>
-                        الكورس كامل ولا ينتهي.
-                    </p>
+                            🏫 التعليم العربي
+
+                        </h4>
+
+
+                        <div class="grid">
+
+
+                            {% for subject in item.arabic_subjects %}
+
+                                <div class="card">
+
+
+                                    <h3 class="subject-name">
+
+                                        📘 {{ subject.subject_name }}
+
+                                    </h3>
+
+
+                                    <div class="price-row">
+
+                                        <span class="price-label">
+
+                                            شهريًا
+
+                                        </span>
+
+                                        <span class="price">
+
+                                            {{ subject.monthly_price }}
+
+                                            جنيه
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="price-row">
+
+                                        <span class="price-label">
+
+                                            الترم كامل
+
+                                        </span>
+
+                                        <span class="price">
+
+                                            {{ subject.full_term_price }}
+
+                                            جنيه
+
+                                        </span>
+
+                                    </div>
+
+
+                                </div>
+
+                            {% endfor %}
+
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- ========================= -->
+                    <!-- لغات -->
+                    <!-- ========================= -->
+
+                    {% if item.language_subjects %}
+
+                        <h4 class="type-title">
+
+                            🌍 التعليم اللغات
+
+                        </h4>
+
+
+                        <div class="grid">
+
+
+                            {% for subject in item.language_subjects %}
+
+                                <div class="card">
+
+
+                                    <h3 class="subject-name">
+
+                                        📘 {{ subject.subject_name }}
+
+                                    </h3>
+
+
+                                    <div class="price-row">
+
+                                        <span class="price-label">
+
+                                            شهريًا
+
+                                        </span>
+
+                                        <span class="price">
+
+                                            {{ subject.monthly_price }}
+
+                                            جنيه
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="price-row">
+
+                                        <span class="price-label">
+
+                                            الترم كامل
+
+                                        </span>
+
+                                        <span class="price">
+
+                                            {{ subject.full_term_price }}
+
+                                            جنيه
+
+                                        </span>
+
+                                    </div>
+
+
+                                </div>
+
+                            {% endfor %}
+
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- ========================= -->
+                    <!-- لا توجد مواد -->
+                    <!-- ========================= -->
+
+                    {% if not item.arabic_subjects and not item.language_subjects %}
+
+                        <div class="empty">
+
+                            لا توجد مواد متاحة حاليًا لهذا الصف.
+
+                        </div>
+
+                    {% endif %}
+
 
                 </div>
 
-            {% empty %}
-
-                <p>
-                    لا توجد مهارات مضافة حاليًا.
-                </p>
 
             {% endfor %}
 
-        </div>
+
+        {% else %}
+
+
+            <div class="empty">
+
+                لا توجد صفوف متاحة حاليًا.
+
+            </div>
+
+
+        {% endif %}
+
 
     </div>
 
+
+    <!-- ========================= -->
+    <!-- أسعار المهارات -->
+    <!-- ========================= -->
+
+    <div class="box">
+
+
+        <h2>
+
+            💻 أسعار المهارات
+
+        </h2>
+
+
+        {% if skills %}
+
+
+            <div class="skills-grid">
+
+
+                {% for skill in skills %}
+
+
+                    <div class="skill-card">
+
+
+                        <h3>
+
+                            ⭐ {{ skill.name }}
+
+                        </h3>
+
+
+                        {% if skill.description %}
+
+                            <p>
+
+                                {{ skill.description }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        <div class="skill-price">
+
+                            {{ skill.course_price }}
+
+                            جنيه
+
+                        </div>
+
+
+                        <p class="skill-note">
+
+                            الكورس كامل ولا ينتهي.
+
+                        </p>
+
+
+                    </div>
+
+
+                {% endfor %}
+
+
+            </div>
+
+
+        {% else %}
+
+
+            <div class="empty">
+
+                لا توجد مهارات مضافة حاليًا.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- العودة -->
+    <!-- ========================= -->
 
     <a
         class="back"
         href="/"
     >
+
         ← العودة للصفحة الرئيسية
+
     </a>
 
+
 </div>
+
 
 </body>
 

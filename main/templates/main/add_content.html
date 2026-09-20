@@ -119,12 +119,92 @@
             text-align: center;
         }
 
+        /* =========================================
+           اختيار نوع الاشتراك
+        ========================================= */
+
+        .plan-box {
+            background: #f8fbff;
+            border: 1px solid #dbe8f8;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .plan-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .plans {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(180px, 1fr)
+            );
+            gap: 15px;
+        }
+
+        .plan-option {
+            position: relative;
+        }
+
+        .plan-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .plan-label {
+            display: block;
+            padding: 18px;
+            background: white;
+            border: 2px solid #dbe3ef;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: .2s;
+        }
+
+        .plan-label:hover {
+            border-color: #3475df;
+        }
+
+        .plan-option input:checked + .plan-label {
+            border-color: #3475df;
+            background: #eef5ff;
+        }
+
+        .plan-name {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .plan-description {
+            display: block;
+            color: #777;
+            font-size: 13px;
+            line-height: 1.7;
+            font-weight: normal;
+        }
+
+        .selected-plan-text {
+            margin-top: 15px;
+            text-align: center;
+            color: #3475df;
+            font-weight: bold;
+        }
+
         .price-box {
             background: #eef5ff;
             padding: 20px;
             border-radius: 15px;
             margin-top: 20px;
             text-align: center;
+            line-height: 2.2;
         }
 
         .total {
@@ -206,6 +286,10 @@
             line-height: 1.8;
         }
 
+        .term-price {
+            color: #3475df;
+        }
+
     </style>
 
 </head>
@@ -239,6 +323,10 @@
     </div>
 
 
+    <!-- ========================================= -->
+    <!-- رسالة النجاح -->
+    <!-- ========================================= -->
+
     {% if success %}
 
         <div class="box">
@@ -268,6 +356,10 @@
     {% endif %}
 
 
+    <!-- ========================================= -->
+    <!-- رسالة الخطأ -->
+    <!-- ========================================= -->
+
     {% if error %}
 
         <div class="error">
@@ -290,6 +382,105 @@
 
 
             <!-- ===================================== -->
+            <!-- اختيار نوع اشتراك المواد -->
+            <!-- ===================================== -->
+
+            {% if curriculum_open %}
+
+                <div class="box">
+
+                    <h2>
+                        💳 اختاري طريقة الاشتراك في المادة
+                    </h2>
+
+                    <div class="plan-box">
+
+                        <div class="plan-title">
+                            مدة الاشتراك
+                        </div>
+
+                        <div class="plans">
+
+                            <!-- شهري -->
+
+                            <div class="plan-option">
+
+                                <input
+                                    type="radio"
+                                    id="monthlyPlan"
+                                    name="plan"
+                                    value="monthly"
+                                    {% if plan == "monthly" %}
+                                        checked
+                                    {% endif %}
+                                >
+
+                                <label
+                                    for="monthlyPlan"
+                                    class="plan-label"
+                                >
+
+                                    <span class="plan-name">
+                                        📅 شهري
+                                    </span>
+
+                                    <span class="plan-description">
+                                        دفع سعر المادة للشهر الحالي
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+
+                            <!-- ترم كامل -->
+
+                            <div class="plan-option">
+
+                                <input
+                                    type="radio"
+                                    id="fullTermPlan"
+                                    name="plan"
+                                    value="full_term"
+                                    {% if plan == "full_term" %}
+                                        checked
+                                    {% endif %}
+                                >
+
+                                <label
+                                    for="fullTermPlan"
+                                    class="plan-label"
+                                >
+
+                                    <span class="plan-name">
+                                        📚 ترم كامل
+                                    </span>
+
+                                    <span class="plan-description">
+                                        دفع سعر المادة للترم كامل
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="selected-plan-text"
+                            id="selectedPlanText"
+                        >
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- ===================================== -->
             <!-- المواد -->
             <!-- ===================================== -->
 
@@ -308,7 +499,13 @@
 
                         <br>
 
-                        سعر كل مادة هو سعر المادة الشهري للصف.
+                        كل مادة لها سعر شهري وسعر ترم
+                        حسب السعر المحدد لها من الإدارة.
+
+                        <br>
+
+                        اختاري أولًا طريقة الاشتراك
+                        ثم اختاري المواد التي تريدين إضافتها.
 
                     </div>
 
@@ -326,7 +523,10 @@
                                         name="selected_subjects"
                                         value="{{ subject.subject_name }}"
                                         class="subject-input"
-                                        data-price="{{ subject_price }}"
+
+                                        data-monthly-price="{{ subject.monthly_price|default:0 }}"
+
+                                        data-term-price="{{ subject.full_term_price|default:0 }}"
                                     >
 
                                     <span>
@@ -341,9 +541,22 @@
                                     السعر الشهري:
 
                                     <strong>
-                                        {{ subject_price }}
+                                        {{ subject.monthly_price|default:0 }}
                                         جنيه
                                     </strong>
+
+                                    <br>
+
+                                    <span class="term-price">
+
+                                        سعر الترم الكامل:
+
+                                        <strong>
+                                            {{ subject.full_term_price|default:0 }}
+                                            جنيه
+                                        </strong>
+
+                                    </span>
 
                                 </div>
 
@@ -390,6 +603,10 @@
 
                         ✅ يمكنك اختيار أكثر من مهارة.
 
+                        <br>
+
+                        💡 سعر المهارة مستقل عن اشتراك المواد.
+
                     </div>
 
 
@@ -404,9 +621,9 @@
                                     <input
                                         type="checkbox"
                                         name="selected_skills"
-                                        value="{{ skill.name }}"
+                                        value="{{ skill.id }}"
                                         class="skill-input"
-                                        data-price="{{ skill.course_price }}"
+                                        data-price="{{ skill.course_price|default:0 }}"
                                     >
 
                                     <span>
@@ -421,7 +638,7 @@
                                     سعر الكورس:
 
                                     <strong>
-                                        {{ skill.course_price }}
+                                        {{ skill.course_price|default:0 }}
                                         جنيه
                                     </strong>
 
@@ -482,30 +699,43 @@
                 <div class="price-box">
 
                     <div>
+
                         سعر المواد:
+
                         <strong>
+
                             <span id="subjectsPrice">
                                 0
                             </span>
+
                             جنيه
+
                         </strong>
+
                     </div>
 
 
                     <div>
+
                         سعر المهارات:
+
                         <strong>
+
                             <span id="skillsPrice">
                                 0
                             </span>
+
                             جنيه
+
                         </strong>
+
                     </div>
 
 
                     <div class="total">
 
                         الإجمالي:
+
                         <span id="totalPrice">
                             0
                         </span>
@@ -596,111 +826,274 @@
 
 <script>
 
-const subjectInputs =
-    document.querySelectorAll(
-        ".subject-input"
-    );
+    // =========================================
+    // عناصر المواد والمهارات
+    // =========================================
+
+    const subjectInputs =
+        document.querySelectorAll(
+            ".subject-input"
+        );
 
 
-const skillInputs =
-    document.querySelectorAll(
-        ".skill-input"
-    );
+    const skillInputs =
+        document.querySelectorAll(
+            ".skill-input"
+        );
 
 
-const subjectPriceElement =
-    document.getElementById(
-        "subjectsPrice"
-    );
+    const subjectPriceElement =
+        document.getElementById(
+            "subjectsPrice"
+        );
 
 
-const skillsPriceElement =
-    document.getElementById(
-        "skillsPrice"
-    );
+    const skillsPriceElement =
+        document.getElementById(
+            "skillsPrice"
+        );
 
 
-const totalPriceElement =
-    document.getElementById(
-        "totalPrice"
-    );
+    const totalPriceElement =
+        document.getElementById(
+            "totalPrice"
+        );
 
 
-function calculateTotal() {
+    const selectedPlanText =
+        document.getElementById(
+            "selectedPlanText"
+        );
 
-    let subjectTotal = 0;
 
-    let skillTotal = 0;
+    // =========================================
+    // معرفة الخطة المختارة
+    // =========================================
 
+    function getSelectedPlan() {
+
+        const selected =
+            document.querySelector(
+                'input[name="plan"]:checked'
+            );
+
+        if (!selected) {
+
+            return "monthly";
+
+        }
+
+        return selected.value;
+    }
+
+
+    // =========================================
+    // تحديث اسم الخطة
+    // =========================================
+
+    function updatePlanText() {
+
+        if (!selectedPlanText) {
+
+            return;
+
+        }
+
+        const plan =
+            getSelectedPlan();
+
+
+        if (plan === "full_term") {
+
+            selectedPlanText.textContent =
+                "📚 تم اختيار: الترم الكامل";
+
+        } else {
+
+            selectedPlanText.textContent =
+                "📅 تم اختيار: الاشتراك الشهري";
+
+        }
+
+    }
+
+
+    // =========================================
+    // حساب سعر المواد
+    // =========================================
+
+    function calculateSubjectsTotal() {
+
+        let subjectTotal = 0;
+
+        const plan =
+            getSelectedPlan();
+
+
+        subjectInputs.forEach(
+            function(input) {
+
+                if (!input.checked) {
+
+                    return;
+
+                }
+
+
+                let price = 0;
+
+
+                if (plan === "full_term") {
+
+                    price =
+                        Number(
+                            input.dataset.termPrice || 0
+                        );
+
+                } else {
+
+                    price =
+                        Number(
+                            input.dataset.monthlyPrice || 0
+                        );
+
+                }
+
+
+                subjectTotal += price;
+
+            }
+        );
+
+
+        return subjectTotal;
+
+    }
+
+
+    // =========================================
+    // حساب سعر المهارات
+    // =========================================
+
+    function calculateSkillsTotal() {
+
+        let skillTotal = 0;
+
+
+        skillInputs.forEach(
+            function(input) {
+
+                if (input.checked) {
+
+                    skillTotal += Number(
+                        input.dataset.price || 0
+                    );
+
+                }
+
+            }
+        );
+
+
+        return skillTotal;
+
+    }
+
+
+    // =========================================
+    // تحديث كل الأسعار
+    // =========================================
+
+    function calculateTotal() {
+
+        const subjectTotal =
+            calculateSubjectsTotal();
+
+
+        const skillTotal =
+            calculateSkillsTotal();
+
+
+        const total =
+            subjectTotal + skillTotal;
+
+
+        subjectPriceElement.textContent =
+            subjectTotal;
+
+
+        skillsPriceElement.textContent =
+            skillTotal;
+
+
+        totalPriceElement.textContent =
+            total;
+
+
+        updatePlanText();
+
+    }
+
+
+    // =========================================
+    // عند تغيير المادة
+    // =========================================
 
     subjectInputs.forEach(
         function(input) {
 
-            if (input.checked) {
-
-                subjectTotal += Number(
-                    input.dataset.price || 0
-                );
-
-            }
+            input.addEventListener(
+                "change",
+                calculateTotal
+            );
 
         }
     );
 
+
+    // =========================================
+    // عند تغيير المهارة
+    // =========================================
 
     skillInputs.forEach(
         function(input) {
 
-            if (input.checked) {
-
-                skillTotal += Number(
-                    input.dataset.price || 0
-                );
-
-            }
+            input.addEventListener(
+                "change",
+                calculateTotal
+            );
 
         }
     );
 
 
-    subjectPriceElement.textContent =
-        subjectTotal;
+    // =========================================
+    // عند تغيير شهري / ترم
+    // =========================================
 
-
-    skillsPriceElement.textContent =
-        skillTotal;
-
-
-    totalPriceElement.textContent =
-        subjectTotal + skillTotal;
-}
-
-
-subjectInputs.forEach(
-    function(input) {
-
-        input.addEventListener(
-            "change",
-            calculateTotal
+    const planInputs =
+        document.querySelectorAll(
+            'input[name="plan"]'
         );
 
-    }
-);
+
+    planInputs.forEach(
+        function(input) {
+
+            input.addEventListener(
+                "change",
+                calculateTotal
+            );
+
+        }
+    );
 
 
-skillInputs.forEach(
-    function(input) {
+    // =========================================
+    // تشغيل الحساب أول ما الصفحة تفتح
+    // =========================================
 
-        input.addEventListener(
-            "change",
-            calculateTotal
-        );
-
-    }
-);
-
-
-calculateTotal();
+    calculateTotal();
 
 </script>
 

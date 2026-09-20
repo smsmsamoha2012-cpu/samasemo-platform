@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote
 import base64
-
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -13,7 +13,6 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from openai import OpenAI
-from django.conf import settings
 
 from .forms import StudentForm, ensure_grade_settings
 
@@ -21,46 +20,33 @@ from .models import (
     AIConversation,
     AIMessage,
     AvailableSubject,
-
     Exam,
     ExamResult,
-
     GradeSetting,
-
     Homework,
     HomeworkAnswer,
     HomeworkResult,
     HomeworkSubmission,
-
     Lesson,
     LessonWatchStat,
-
     PlatformSettings,
-
     Skill,
     SkillLesson,
     SkillSubscription,
-
-    # ==========================================
-    # واجبات المهارات الجديدة
-    # ==========================================
-
     SkillHomework,
     SkillHomeworkAnswer,
     SkillHomeworkQuestion,
     SkillHomeworkResult,
     SkillHomeworkSubmission,
-
     Student,
-
     SubjectSubscription,
     SubscriptionRequest,
 )
 
 
-# ====================================================
+# =========================================================
 # إعدادات عامة
-# ====================================================
+# =========================================================
 
 DJANGO_BACKEND = "django.contrib.auth.backends.ModelBackend"
 
@@ -75,41 +61,35 @@ ALLOWED_AI_IMAGE_TYPES = {
 }
 
 
-# ====================================================
+# =========================================================
 # أدوات مساعدة
-# ====================================================
+# =========================================================
 
 def get_current_student(request):
-
     if not request.user.is_authenticated:
         return None
 
     return (
-        Student.objects.filter(
-            user=request.user
-        )
+        Student.objects
+        .filter(user=request.user)
         .select_related("user")
         .first()
     )
 
 
 def get_platform_settings():
-
     return PlatformSettings.get_settings()
 
 
 def is_curriculum_open(settings_obj):
-
     return settings_obj.curriculum_is_open_now()
 
 
 def is_skills_open(settings_obj):
-
     return settings_obj.skills_are_open_now()
 
 
 def build_whatsapp_link(number):
-
     if not number:
         return "#"
 
@@ -125,10 +105,14 @@ def build_whatsapp_link(number):
     return f"https://wa.me/{digits}"
 
 
-def get_student_subject_subscriptions(student):
+# =========================================================
+# اشتراكات الطالب
+# =========================================================
 
+def get_student_subject_subscriptions(student):
     subscriptions = (
-        SubjectSubscription.objects.filter(
+        SubjectSubscription.objects
+        .filter(
             student=student,
             is_active=True,
         )
@@ -138,7 +122,6 @@ def get_student_subject_subscriptions(student):
     usable = []
 
     for subscription in subscriptions:
-
         subscription.check_expired()
 
         if subscription.is_usable:
@@ -148,10 +131,7 @@ def get_student_subject_subscriptions(student):
 
 
 def get_student_subjects(student):
-
-    subscriptions = get_student_subject_subscriptions(
-        student
-    )
+    subscriptions = get_student_subject_subscriptions(student)
 
     return [
         subscription.subject
@@ -160,15 +140,11 @@ def get_student_subjects(student):
 
 
 def get_student_subject_cards(student):
-
-    subscriptions = get_student_subject_subscriptions(
-        student
-    )
+    subscriptions = get_student_subject_subscriptions(student)
 
     cards = []
 
     for subscription in subscriptions:
-
         cards.append(
             {
                 "name": subscription.subject,
@@ -182,9 +158,9 @@ def get_student_subject_cards(student):
 
 
 def get_student_skill_subscriptions(student):
-
     subscriptions = (
-        SkillSubscription.objects.filter(
+        SkillSubscription.objects
+        .filter(
             student=student,
             is_active=True,
             skill__is_active=True,
@@ -197,10 +173,7 @@ def get_student_skill_subscriptions(student):
 
 
 def get_student_skills(student):
-
-    subscriptions = get_student_skill_subscriptions(
-        student
-    )
+    subscriptions = get_student_skill_subscriptions(student)
 
     return [
         subscription.skill
@@ -208,10 +181,547 @@ def get_student_skills(student):
     ]
 
 
-def get_available_subjects(student):
+# =========================================================
+# تقدم المنهج
+# =========================================================
 
+def get_subject_progress_data(student):
+    """
+    تجهيز بيانات المنهج لكل مادة مشترَك فيها:
+
+    - عدد الحصص الكلي
+    - عدد الحصص المشاهدة
+    - عدد الحصص غير المشاهدة
+    - أسماء الحصص
+    - حالة الواجب لكل حصة
+    - نتائج الواجبات
+    - نتائج الامتحانات
+    - هل المادة انتهت أم لا
+    """
+
+    subscriptions = (
+        SubjectSubscription.objects
+        .filter(
+            student=student,
+            is_active=True,
+        )
+        .order_by("subject")
+    )
+
+    data = []
+
+    for subscription in subscriptions:
+        subscription.check_expired()
+
+        if not subscription.is_active:
+            continue
+
+        lessons = list(
+            Lesson.objects
+            .filter(
+                grade=student.grade,
+                school_type=student.school_type,
+                subject=subscription.subject,
+                is_active=True,
+            )
+            .order_by("created_at", "id")
+        )
+
+        lesson_ids = [
+            lesson.id
+            for lesson in lessons
+        ]
+
+        watch_stats = {
+            stat.lesson_id: stat
+            for stat in (
+                LessonWatchStat.objects
+                .filter(
+                    student=student,
+                    lesson_id__in=lesson_ids,
+                )
+            )
+        }
+
+        homeworks = list(
+            Homework.objects
+            .filter(
+                grade=student.grade,
+                school_type=student.school_type,
+                subject=subscription.subject,
+                is_active=True,
+            )
+            .order_by("created_at", "id")
+        )
+
+        homework_ids = [
+            homework.id
+            for homework in homeworks
+        ]
+
+        submissions = {
+            submission.homework_id: submission
+            for submission in (
+                HomeworkSubmission.objects
+                .filter(
+                    student=student,
+                    homework_id__in=homework_ids,
+                )
+            )
+        }
+
+        homework_results = {
+            result.homework_id: result
+            for result in (
+                HomeworkResult.objects
+                .filter(
+                    student=student,
+                    homework_id__in=homework_ids,
+                )
+            )
+        }
+
+        exams = list(
+            Exam.objects
+            .filter(
+                grade=student.grade,
+                school_type=student.school_type,
+                subject=subscription.subject,
+                is_active=True,
+            )
+            .order_by("created_at", "id")
+        )
+
+        exam_ids = [
+            exam.id
+            for exam in exams
+        ]
+
+        exam_results = {
+            result.exam_id: result
+            for result in (
+                ExamResult.objects
+                .filter(
+                    student=student,
+                    exam_id__in=exam_ids,
+                )
+            )
+        }
+
+        lesson_data = []
+
+        watched_count = 0
+        unwatched_count = 0
+
+        for lesson in lessons:
+            stat = watch_stats.get(lesson.id)
+
+            is_watched = bool(
+                stat
+                and (
+                    stat.view_count > 0
+                    or stat.watch_seconds > 0
+                )
+            )
+
+            if is_watched:
+                watched_count += 1
+            else:
+                unwatched_count += 1
+
+            related_homeworks = [
+                homework
+                for homework in homeworks
+                if getattr(
+                    homework,
+                    "lesson_id",
+                    None,
+                ) == lesson.id
+            ]
+
+            lesson_homeworks = []
+
+            for homework in related_homeworks:
+                submission = submissions.get(
+                    homework.id
+                )
+
+                result = homework_results.get(
+                    homework.id
+                )
+
+                lesson_homeworks.append(
+                    {
+                        "homework": homework,
+                        "submission": submission,
+                        "result": result,
+                        "submitted": bool(
+                            submission
+                            and submission.status
+                            in [
+                                "submitted",
+                                "graded",
+                            ]
+                        ),
+                    }
+                )
+
+            lesson_data.append(
+                {
+                    "lesson": lesson,
+                    "is_watched": is_watched,
+                    "watch_stat": stat,
+                    "homeworks": lesson_homeworks,
+                }
+            )
+
+        # واجبات غير مرتبطة بحصة
+        unlinked_homeworks = []
+
+        for homework in homeworks:
+            if getattr(
+                homework,
+                "lesson_id",
+                None,
+            ):
+                continue
+
+            submission = submissions.get(
+                homework.id
+            )
+
+            result = homework_results.get(
+                homework.id
+            )
+
+            unlinked_homeworks.append(
+                {
+                    "homework": homework,
+                    "submission": submission,
+                    "result": result,
+                    "submitted": bool(
+                        submission
+                        and submission.status
+                        in [
+                            "submitted",
+                            "graded",
+                        ]
+                    ),
+                }
+            )
+
+        total_homework_count = len(
+            homeworks
+        )
+
+        submitted_homework_count = sum(
+            1
+            for submission in submissions.values()
+            if submission.status
+            in [
+                "submitted",
+                "graded",
+            ]
+        )
+
+        homework_remaining_count = max(
+            total_homework_count
+            - submitted_homework_count,
+            0,
+        )
+
+        total_exam_count = len(exams)
+
+        completed_exam_count = sum(
+            1
+            for exam_id in exam_ids
+            if exam_id in exam_results
+        )
+
+        remaining_lessons = (
+            subscription.lessons_remaining
+        )
+
+        if subscription.plan_type == "full_term":
+            subject_finished = (
+                len(lessons) > 0
+                and unwatched_count == 0
+            )
+        else:
+            subject_finished = (
+                remaining_lessons == 0
+            )
+
+        data.append(
+            {
+                "subscription": subscription,
+                "subject": subscription.subject,
+                "plan_type": subscription.plan_type,
+
+                "lessons": lessons,
+                "lesson_data": lesson_data,
+
+                "total_lessons": len(lessons),
+                "watched_lessons": watched_count,
+                "unwatched_lessons": unwatched_count,
+
+                "remaining_lessons": remaining_lessons,
+
+                "homeworks": homeworks,
+                "unlinked_homeworks": unlinked_homeworks,
+
+                "total_homeworks": total_homework_count,
+                "submitted_homeworks": submitted_homework_count,
+                "remaining_homeworks": homework_remaining_count,
+
+                "homework_results": list(
+                    homework_results.values()
+                ),
+
+                "exams": exams,
+                "exam_results": list(
+                    exam_results.values()
+                ),
+
+                "total_exams": total_exam_count,
+                "completed_exams": completed_exam_count,
+
+                "subject_finished": subject_finished,
+            }
+        )
+
+    return data
+
+
+# =========================================================
+# تقدم المهارات
+# =========================================================
+
+def get_skill_progress_data(student):
+    """
+    تجهيز تقدم كل مهارة للطالب:
+
+    - الحصص المشاهدة
+    - الحصص غير المشاهدة
+    - الواجبات
+    - هل الواجب تم تسليمه أم لا
+    - نتائج الواجبات
+    """
+
+    subscriptions = (
+        SkillSubscription.objects
+        .filter(
+            student=student,
+            is_active=True,
+            skill__is_active=True,
+        )
+        .select_related("skill")
+        .order_by("skill__name")
+    )
+
+    data = []
+
+    for subscription in subscriptions:
+        skill = subscription.skill
+
+        lessons = list(
+            SkillLesson.objects
+            .filter(
+                skill=skill,
+                is_active=True,
+            )
+            .order_by("order", "id")
+        )
+
+        lesson_ids = [
+            lesson.id
+            for lesson in lessons
+        ]
+
+        # لو SkillLesson سيُربط مستقبلًا بـ LessonWatchStat
+        # نستخدم وجود إحصائية المشاهدة إن كان الربط موجودًا.
+        watched_skill_lessons = set()
+
+        if lesson_ids:
+            try:
+                skill_stats = (
+                    LessonWatchStat.objects
+                    .filter(
+                        student=student,
+                        lesson_id__in=lesson_ids,
+                    )
+                )
+
+                for stat in skill_stats:
+                    if (
+                        stat.view_count > 0
+                        or stat.watch_seconds > 0
+                    ):
+                        watched_skill_lessons.add(
+                            stat.lesson_id
+                        )
+
+            except Exception:
+                watched_skill_lessons = set()
+
+        skill_homeworks = list(
+            SkillHomework.objects
+            .filter(
+                skill=skill,
+                is_active=True,
+            )
+            .prefetch_related("questions")
+            .order_by("created_at", "id")
+        )
+
+        homework_ids = [
+            homework.id
+            for homework in skill_homeworks
+        ]
+
+        submissions = {
+            submission.homework_id: submission
+            for submission in (
+                SkillHomeworkSubmission.objects
+                .filter(
+                    student=student,
+                    homework_id__in=homework_ids,
+                )
+            )
+        }
+
+        results = {
+            result.homework_id: result
+            for result in (
+                SkillHomeworkResult.objects
+                .filter(
+                    student=student,
+                    homework_id__in=homework_ids,
+                )
+            )
+        }
+
+        lesson_data = []
+
+        watched_count = 0
+        unwatched_count = 0
+
+        for lesson in lessons:
+            is_watched = (
+                lesson.id
+                in watched_skill_lessons
+            )
+
+            if is_watched:
+                watched_count += 1
+            else:
+                unwatched_count += 1
+
+            related_homeworks = [
+                homework
+                for homework in skill_homeworks
+                if getattr(
+                    homework,
+                    "lesson_id",
+                    None,
+                ) == lesson.id
+            ]
+
+            lesson_homeworks = []
+
+            for homework in related_homeworks:
+                submission = submissions.get(
+                    homework.id
+                )
+
+                result = results.get(
+                    homework.id
+                )
+
+                lesson_homeworks.append(
+                    {
+                        "homework": homework,
+                        "submission": submission,
+                        "result": result,
+                        "submitted": bool(
+                            submission
+                            and submission.status
+                            in [
+                                "submitted",
+                                "graded",
+                            ]
+                        ),
+                    }
+                )
+
+            lesson_data.append(
+                {
+                    "lesson": lesson,
+                    "is_watched": is_watched,
+                    "homeworks": lesson_homeworks,
+                }
+            )
+
+        submitted_count = sum(
+            1
+            for submission in submissions.values()
+            if submission.status
+            in [
+                "submitted",
+                "graded",
+            ]
+        )
+
+        total_homework_count = len(
+            skill_homeworks
+        )
+
+        remaining_homework_count = max(
+            total_homework_count
+            - submitted_count,
+            0,
+        )
+
+        data.append(
+            {
+                "subscription": subscription,
+                "skill": skill,
+
+                "lessons": lessons,
+                "lesson_data": lesson_data,
+
+                "total_lessons": len(lessons),
+                "watched_lessons": watched_count,
+                "unwatched_lessons": unwatched_count,
+
+                "homeworks": skill_homeworks,
+
+                "total_homeworks": (
+                    total_homework_count
+                ),
+                "submitted_homeworks": (
+                    submitted_count
+                ),
+                "remaining_homeworks": (
+                    remaining_homework_count
+                ),
+
+                "submissions": submissions,
+                "results": results,
+            }
+        )
+
+    return data
+
+
+# =========================================================
+# المواد المتاحة
+# =========================================================
+
+def get_available_subjects(student):
     setting = (
-        GradeSetting.objects.filter(
+        GradeSetting.objects
+        .filter(
             grade=student.grade,
             is_active=True,
         )
@@ -226,7 +736,8 @@ def get_available_subjects(student):
     )
 
     return (
-        AvailableSubject.objects.filter(
+        AvailableSubject.objects
+        .filter(
             grade=setting,
             school_type=student.school_type,
             is_active=True,
@@ -239,9 +750,9 @@ def get_available_subjects(student):
 
 
 def get_available_skills(student):
-
     active_skill_ids = (
-        SkillSubscription.objects.filter(
+        SkillSubscription.objects
+        .filter(
             student=student,
             is_active=True,
         )
@@ -252,109 +763,46 @@ def get_available_skills(student):
     )
 
     return (
-        Skill.objects.filter(
-            is_active=True,
-        )
-        .exclude(
-            id__in=active_skill_ids
-        )
-        .prefetch_related(
-            "prerequisites"
-        )
+        Skill.objects
+        .filter(is_active=True)
+        .exclude(id__in=active_skill_ids)
+        .prefetch_related("prerequisites")
         .order_by("name")
     )
 
 
-# ====================================================
+# =========================================================
 # أسعار المواد
-# ====================================================
+# =========================================================
 
-def get_grade_setting_for_student(student):
-
-    return (
-        GradeSetting.objects.filter(
-            grade=student.grade,
-            is_active=True,
-        )
-        .first()
-    )
-
-
-def subject_monthly_price(student):
-
-    setting = get_grade_setting_for_student(
-        student
-    )
-
-    if not setting:
+def get_subject_monthly_price(student, subject_obj):
+    if not subject_obj:
         return 0
 
-    return setting.monthly_subject_price
+    return subject_obj.monthly_price or 0
 
 
-def subject_full_term_price(student):
-
-    setting = get_grade_setting_for_student(
-        student
-    )
-
-    if not setting:
+def get_subject_full_term_price(student, subject_obj):
+    if not subject_obj:
         return 0
 
-    return setting.full_term_price
+    return subject_obj.full_term_price or 0
 
 
-def get_subject_monthly_price(
-    student,
-    subject_obj,
-):
-
-    if subject_obj.monthly_price > 0:
-
-        return subject_obj.monthly_price
-
-    return subject_monthly_price(
-        student
-    )
-
-
-def get_subject_full_term_price(
-    student,
-    subject_obj,
-):
-
-    if subject_obj.full_term_price > 0:
-
-        return subject_obj.full_term_price
-
-    return subject_full_term_price(
-        student
-    )
-
-
-def get_subject_price_data(
-    student,
-    subjects,
-):
-
+def get_subject_price_data(student, subjects):
     data = []
 
     for subject in subjects:
-
         data.append(
             {
                 "subject": subject,
-                "monthly_price": (
-                    get_subject_monthly_price(
-                        student,
-                        subject,
-                    )
+                "monthly_price": get_subject_monthly_price(
+                    student,
+                    subject,
                 ),
-                "full_term_price": (
-                    get_subject_full_term_price(
-                        student,
-                        subject,
-                    )
+                "full_term_price": get_subject_full_term_price(
+                    student,
+                    subject,
                 ),
             }
         )
@@ -362,21 +810,23 @@ def get_subject_price_data(
     return data
 
 
-def get_latest_request(student):
+# =========================================================
+# طلبات الاشتراك
+# =========================================================
 
+def get_latest_request(student):
     return (
-        SubscriptionRequest.objects.filter(
-            student=student
-        )
+        SubscriptionRequest.objects
+        .filter(student=student)
         .order_by("-created_at")
         .first()
     )
 
 
 def get_latest_pending_request(student):
-
     return (
-        SubscriptionRequest.objects.filter(
+        SubscriptionRequest.objects
+        .filter(
             student=student,
             status="pending",
         )
@@ -386,9 +836,9 @@ def get_latest_pending_request(student):
 
 
 def get_latest_rejected_request(student):
-
     return (
-        SubscriptionRequest.objects.filter(
+        SubscriptionRequest.objects
+        .filter(
             student=student,
             status="rejected",
         )
@@ -404,7 +854,6 @@ def render_old_student(
     rejected_request=None,
     show_subscription=False,
 ):
-
     settings_obj = get_platform_settings()
 
     return render(
@@ -425,50 +874,41 @@ def render_old_student(
     )
 
 
-# ====================================================
+# =========================================================
 # Home
-# ====================================================
+# =========================================================
 
 def home(request):
-
     return render(
         request,
         "main/manasa.html",
     )
 
 
-# ====================================================
-# Student Registration
-# ====================================================
+# =========================================================
+# طالب جديد
+# =========================================================
 
 def student(request):
-
     ensure_grade_settings()
 
     settings_obj = get_platform_settings()
 
     active_grades = (
-        GradeSetting.objects.filter(
-            is_active=True
-        )
+        GradeSetting.objects
+        .filter(is_active=True)
         .order_by("id")
     )
 
     skills = (
-        Skill.objects.filter(
-            is_active=True
-        )
-        .prefetch_related(
-            "prerequisites"
-        )
+        Skill.objects
+        .filter(is_active=True)
+        .prefetch_related("prerequisites")
         .order_by("name")
     )
 
     if request.method == "POST":
-
-        form = StudentForm(
-            request.POST
-        )
+        form = StudentForm(request.POST)
 
         password = request.POST.get(
             "password",
@@ -491,9 +931,9 @@ def student(request):
         }
 
         if password != confirm_password:
-
-            context["error"] = (
-                "كلمتا المرور غير متطابقتين."
+            form.add_error(
+                None,
+                "كلمتا المرور غير متطابقتين.",
             )
 
             return render(
@@ -503,10 +943,9 @@ def student(request):
             )
 
         if len(password) < 6:
-
-            context["error"] = (
-                "كلمة المرور يجب أن تكون "
-                "6 أحرف أو أرقام على الأقل."
+            form.add_error(
+                None,
+                "كلمة المرور يجب أن تكون 6 أحرف أو أرقام على الأقل.",
             )
 
             return render(
@@ -516,29 +955,23 @@ def student(request):
             )
 
         if form.is_valid():
-
             student_phone = (
-                form.cleaned_data[
-                    "student_phone"
-                ]
+                form.cleaned_data["student_phone"]
                 .strip()
             )
 
-            if Student.objects.filter(
-                student_phone=student_phone
-            ).exists():
+            existing_student = (
+                Student.objects
+                .filter(
+                    student_phone=student_phone
+                )
+                .first()
+            )
 
+            if existing_student:
                 form.add_error(
                     "student_phone",
                     "رقم تليفون الطالب مسجل بالفعل.",
-                )
-
-            elif User.objects.filter(
-                username=student_phone
-            ).exists():
-
-                context["error"] = (
-                    "هذا الرقم مرتبط بحساب موجود بالفعل."
                 )
 
                 return render(
@@ -547,78 +980,115 @@ def student(request):
                     context,
                 )
 
-            else:
+            existing_user = (
+                User.objects
+                .filter(
+                    username=student_phone
+                )
+                .first()
+            )
 
-                selected_skills = (
-                    form.cleaned_data.get(
-                        "initial_skills"
+            if existing_user:
+                linked_student = (
+                    Student.objects
+                    .filter(
+                        user=existing_user
                     )
-                    or []
+                    .first()
                 )
 
-                try:
-
-                    with transaction.atomic():
-
-                        user = User.objects.create_user(
-                            username=student_phone,
-                            password=password,
-                        )
-
-                        user.is_active = True
-
-                        user.save(
-                            update_fields=[
-                                "is_active",
-                            ]
-                        )
-
-                        student_obj = form.save(
-                            commit=False
-                        )
-
-                        student_obj.user = user
-                        student_obj.is_active = False
-
-                        student_obj.selected_skills = [
-                            skill.name
-                            for skill in selected_skills
-                        ]
-
-                        student_obj.save()
-
-                    login(
-                        request,
-                        user,
-                        backend=DJANGO_BACKEND,
-                    )
-
-                    messages.success(
-                        request,
-                        "تم إنشاء حساب الطالب بنجاح ✅",
-                    )
-
-                    return redirect(
-                        "subscription"
-                    )
-
-                except Exception as exc:
-
-                    print(
-                        "Student registration error:",
-                        exc,
-                    )
-
+                if linked_student:
                     form.add_error(
-                        None,
-                        (
-                            "حدث خطأ أثناء إنشاء الحساب. "
-                            "حاولي مرة أخرى."
-                        ),
+                        "student_phone",
+                        "هذا الرقم مرتبط بحساب طالب موجود بالفعل.",
                     )
+
+                    return render(
+                        request,
+                        "main/student.html",
+                        context,
+                    )
+
+                if (
+                    existing_user.is_staff
+                    or existing_user.is_superuser
+                ):
+                    form.add_error(
+                        "student_phone",
+                        "هذا الرقم مرتبط بحساب إداري ولا يمكن استخدامه.",
+                    )
+
+                    return render(
+                        request,
+                        "main/student.html",
+                        context,
+                    )
+
+                existing_user.delete()
+
+            selected_skills = (
+                form.cleaned_data.get(
+                    "initial_skills"
+                )
+                or []
+            )
+
+            try:
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=student_phone,
+                        password=password,
+                    )
+
+                    user.is_active = True
+
+                    user.save(
+                        update_fields=[
+                            "is_active"
+                        ]
+                    )
+
+                    student_obj = form.save(
+                        commit=False
+                    )
+
+                    student_obj.user = user
+                    student_obj.is_active = False
+
+                    student_obj.selected_skills = [
+                        skill.name
+                        for skill in selected_skills
+                    ]
+
+                    student_obj.save()
+
+                login(
+                    request,
+                    user,
+                    backend=DJANGO_BACKEND,
+                )
+
+                messages.success(
+                    request,
+                    "تم إنشاء حساب الطالب بنجاح ✅",
+                )
+
+                return redirect(
+                    "subscription"
+                )
+
+            except Exception as exc:
+                print(
+                    "Student registration error:",
+                    exc,
+                )
+
+                form.add_error(
+                    None,
+                    "حدث خطأ أثناء إنشاء الحساب. حاولي مرة أخرى.",
+                )
 
     else:
-
         form = StudentForm()
 
     return render(
@@ -636,13 +1106,12 @@ def student(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Subscription
-# ====================================================
+# =========================================================
 
 @login_required
 def subscription(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj:
@@ -677,14 +1146,6 @@ def subscription(request):
         available_subjects,
     )
 
-    monthly_price = subject_monthly_price(
-        student_obj
-    )
-
-    full_term_price = subject_full_term_price(
-        student_obj
-    )
-
     pending_request = get_latest_pending_request(
         student_obj
     )
@@ -697,73 +1158,32 @@ def subscription(request):
         student_obj.selected_skills
         if isinstance(
             student_obj.selected_skills,
-            list
+            list,
         )
         else []
     )
 
     common_context = {
         "student": student_obj,
-
-        "available_subjects": (
-            available_subjects
-        ),
-
-        "subject_price_data": (
-            subject_price_data
-        ),
-
-        "available_skills": (
-            available_skills
-        ),
-
-        "monthly_subject_price": (
-            monthly_price
-        ),
-
-        "full_term_price": (
-            full_term_price
-        ),
-
-        "curriculum_open": (
-            curriculum_open
-        ),
-
-        "skills_open": (
-            skills_open
-        ),
-
-        "vodafone_number": (
-            settings_obj.vodafone_cash_number
-        ),
-
+        "available_subjects": available_subjects,
+        "subject_price_data": subject_price_data,
+        "available_skills": available_skills,
+        "curriculum_open": curriculum_open,
+        "skills_open": skills_open,
+        "vodafone_number": settings_obj.vodafone_cash_number,
         "support_whatsapp": build_whatsapp_link(
             settings_obj.whatsapp_number
         ),
-
-        "pending_request": (
-            pending_request
-        ),
-
-        "rejected_request": (
-            rejected_request
-        ),
-
+        "pending_request": pending_request,
+        "rejected_request": rejected_request,
         "selected_subjects": [],
-
-        "selected_skills": (
-            default_selected_skills
-        ),
-
+        "selected_skills": default_selected_skills,
         "plan": "monthly",
-
         "total_amount": 0,
     }
 
     if request.method == "POST":
-
         if pending_request:
-
             common_context["error"] = (
                 "لديك طلب اشتراك قيد المراجعة بالفعل."
             )
@@ -785,7 +1205,6 @@ def subscription(request):
             "skills",
             "mixed",
         ]:
-
             plan = "monthly"
 
         selected_subjects = list(
@@ -809,17 +1228,14 @@ def subscription(request):
         )
 
         common_context["plan"] = plan
-
         common_context["selected_subjects"] = (
             selected_subjects
         )
-
         common_context["selected_skills"] = (
             posted_skill_values
         )
 
         if not transfer_image:
-
             common_context["error"] = (
                 "من فضلك ارفعي صورة التحويل."
             )
@@ -837,50 +1253,23 @@ def subscription(request):
 
         selected_subjects = [
             subject_name
-            for subject_name
-            in selected_subjects
-            if subject_name
-            in available_subject_map
+            for subject_name in selected_subjects
+            if subject_name in available_subject_map
         ]
 
-        if plan == "full_term":
+        if (
+            selected_subjects
+            and not curriculum_open
+        ):
+            common_context["error"] = (
+                "المنهج غير متاح حاليًا."
+            )
 
-            if not curriculum_open:
-
-                common_context["error"] = (
-                    "المنهج غير متاح حاليًا."
-                )
-
-                return render(
-                    request,
-                    "main/subscription.html",
-                    common_context,
-                )
-
-            selected_subjects = [
-                subject.subject_name
-                for subject in available_subjects
-            ]
-
-        elif plan in [
-            "monthly",
-            "mixed",
-        ]:
-
-            if (
-                selected_subjects
-                and not curriculum_open
-            ):
-
-                common_context["error"] = (
-                    "المنهج غير متاح حاليًا."
-                )
-
-                return render(
-                    request,
-                    "main/subscription.html",
-                    common_context,
-                )
+            return render(
+                request,
+                "main/subscription.html",
+                common_context,
+            )
 
         available_skill_map_by_id = {
             str(skill.id): skill
@@ -895,7 +1284,6 @@ def subscription(request):
         selected_skill_objects = []
 
         for value in posted_skill_values:
-
             skill = (
                 available_skill_map_by_id.get(
                     str(value)
@@ -906,7 +1294,6 @@ def subscription(request):
             )
 
             if skill:
-
                 selected_skill_objects.append(
                     skill
                 )
@@ -914,15 +1301,13 @@ def subscription(request):
         selected_skill_objects = list(
             {
                 skill.id: skill
-                for skill
-                in selected_skill_objects
+                for skill in selected_skill_objects
             }.values()
         )
 
         selected_skills = [
             skill.name
-            for skill
-            in selected_skill_objects
+            for skill in selected_skill_objects
         ]
 
         common_context["selected_skills"] = (
@@ -933,7 +1318,6 @@ def subscription(request):
             selected_skills
             and not skills_open
         ):
-
             common_context["error"] = (
                 "المهارات غير متاحة حاليًا."
             )
@@ -945,18 +1329,15 @@ def subscription(request):
             )
 
         if plan == "skills":
-
             selected_subjects = []
 
         elif plan == "full_term":
-
-            selected_skills = []
+            pass
 
         if (
             not selected_subjects
             and not selected_skills
         ):
-
             common_context["error"] = (
                 "اختاري مادة أو مهارة واحدة على الأقل."
             )
@@ -970,27 +1351,21 @@ def subscription(request):
         curriculum_amount = 0
 
         for subject_name in selected_subjects:
-
-            subject_obj = (
-                available_subject_map.get(
-                    subject_name
-                )
+            subject_obj = available_subject_map.get(
+                subject_name
             )
 
             if not subject_obj:
                 continue
 
             if plan == "full_term":
-
                 curriculum_amount += (
                     get_subject_full_term_price(
                         student_obj,
                         subject_obj,
                     )
                 )
-
             else:
-
                 curriculum_amount += (
                     get_subject_monthly_price(
                         student_obj,
@@ -1005,19 +1380,19 @@ def subscription(request):
         )
 
         for skill in selected_skill_objects:
-
             missing_prerequisites = []
 
             for prerequisite in (
                 skill.prerequisites.all()
             ):
-
                 already_active = (
-                    SkillSubscription.objects.filter(
+                    SkillSubscription.objects
+                    .filter(
                         student=student_obj,
                         skill=prerequisite,
                         is_active=True,
-                    ).exists()
+                    )
+                    .exists()
                 )
 
                 if (
@@ -1025,16 +1400,13 @@ def subscription(request):
                     not in selected_skill_names
                     and not already_active
                 ):
-
                     missing_prerequisites.append(
                         prerequisite.name
                     )
 
             if missing_prerequisites:
-
                 common_context["error"] = (
-                    f"المهارة {skill.name} "
-                    f"تحتاج أولًا إلى: "
+                    f"المهارة {skill.name} تحتاج أولًا إلى: "
                     + " + ".join(
                         missing_prerequisites
                     )
@@ -1046,9 +1418,7 @@ def subscription(request):
                     common_context,
                 )
 
-            skills_amount += (
-                skill.course_price
-            )
+            skills_amount += skill.course_price
 
         amount = (
             curriculum_amount
@@ -1059,19 +1429,15 @@ def subscription(request):
             selected_subjects
             and selected_skills
         ):
-
             final_type = "mixed"
 
         elif selected_skills:
-
             final_type = "skills"
 
         elif plan == "full_term":
-
             final_type = "full_term"
 
         else:
-
             final_type = "subjects"
 
         common_context["selected_subjects"] = (
@@ -1082,30 +1448,18 @@ def subscription(request):
             selected_skills
         )
 
-        common_context["total_amount"] = (
-            amount
-        )
+        common_context["total_amount"] = amount
 
         SubscriptionRequest.objects.create(
             student=student_obj,
             request_type="initial",
             amount=amount,
-            curriculum_amount=(
-                curriculum_amount
-            ),
-            skills_amount=(
-                skills_amount
-            ),
+            curriculum_amount=curriculum_amount,
+            skills_amount=skills_amount,
             subscription_type=final_type,
-            selected_subjects=(
-                selected_subjects
-            ),
-            selected_skills=(
-                selected_skills
-            ),
-            transfer_image=(
-                transfer_image
-            ),
+            selected_subjects=selected_subjects,
+            selected_skills=selected_skills,
+            transfer_image=transfer_image,
             status="pending",
         )
 
@@ -1126,14 +1480,12 @@ def subscription(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Old Student
-# ====================================================
+# =========================================================
 
 def old_student(request):
-
     if request.method != "POST":
-
         return render_old_student(request)
 
     phone = (
@@ -1150,15 +1502,13 @@ def old_student(request):
     )
 
     student_obj = (
-        Student.objects.filter(
-            student_phone=phone
-        )
+        Student.objects
+        .filter(student_phone=phone)
         .select_related("user")
         .first()
     )
 
     if not student_obj:
-
         return render_old_student(
             request,
             error=(
@@ -1168,7 +1518,6 @@ def old_student(request):
         )
 
     if not student_obj.user:
-
         return render_old_student(
             request,
             student_obj=student_obj,
@@ -1186,7 +1535,6 @@ def old_student(request):
     )
 
     if user is None:
-
         return render_old_student(
             request,
             student_obj=student_obj,
@@ -1200,19 +1548,15 @@ def old_student(request):
     )
 
     if student_obj.is_active:
-
         return redirect(
             "student_dashboard"
         )
 
-    pending_request = (
-        get_latest_pending_request(
-            student_obj
-        )
+    pending_request = get_latest_pending_request(
+        student_obj
     )
 
     if pending_request:
-
         return render_old_student(
             request,
             student_obj=student_obj,
@@ -1221,14 +1565,11 @@ def old_student(request):
             ),
         )
 
-    rejected_request = (
-        get_latest_rejected_request(
-            student_obj
-        )
+    rejected_request = get_latest_rejected_request(
+        student_obj
     )
 
     if rejected_request:
-
         return render_old_student(
             request,
             student_obj=student_obj,
@@ -1237,7 +1578,6 @@ def old_student(request):
         )
 
     if student_obj.suspension_reason:
-
         return render_old_student(
             request,
             student_obj=student_obj,
@@ -1252,13 +1592,12 @@ def old_student(request):
     )
 
 
-# ====================================================
-# Old Student Subscription Choice
-# ====================================================
+# =========================================================
+# Old Student Subscription
+# =========================================================
 
 @login_required
 def old_student_subscription(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj:
@@ -1272,9 +1611,8 @@ def old_student_subscription(request):
     settings_obj = get_platform_settings()
 
     active_grades = (
-        GradeSetting.objects.filter(
-            is_active=True
-        )
+        GradeSetting.objects
+        .filter(is_active=True)
         .order_by("id")
     )
 
@@ -1295,33 +1633,38 @@ def old_student_subscription(request):
     ).strip()
 
     grade_setting = (
-        GradeSetting.objects.filter(
+        GradeSetting.objects
+        .filter(
             grade=selected_grade,
             is_active=True,
         )
         .first()
     )
 
-    monthly_price = 0
-    full_term_price = 0
-
-    if grade_setting:
-
-        monthly_price = (
-            grade_setting.monthly_subject_price
+    available_subjects = (
+        AvailableSubject.objects
+        .filter(
+            grade=grade_setting,
+            school_type=selected_school_type,
+            is_active=True,
         )
+        .order_by("subject_name")
+        if grade_setting
+        else AvailableSubject.objects.none()
+    )
 
-        full_term_price = (
-            grade_setting.full_term_price
-        )
+    subject_price_data = get_subject_price_data(
+        student_obj,
+        available_subjects,
+    )
 
     context = {
         "student": student_obj,
         "grades": active_grades,
         "selected_grade": selected_grade,
         "selected_school_type": selected_school_type,
-        "monthly_price": monthly_price,
-        "full_term_price": full_term_price,
+        "available_subjects": available_subjects,
+        "subject_price_data": subject_price_data,
         "vodafone_number": (
             settings_obj.vodafone_cash_number
         ),
@@ -1331,12 +1674,8 @@ def old_student_subscription(request):
     }
 
     if request.method == "POST":
-
         if not selected_grade:
-
-            context["error"] = (
-                "اختاري الصف أولًا."
-            )
+            context["error"] = "اختاري الصف أولًا."
 
             return render(
                 request,
@@ -1345,7 +1684,6 @@ def old_student_subscription(request):
             )
 
         if not grade_setting:
-
             context["error"] = (
                 "هذا الصف غير متاح حاليًا."
             )
@@ -1360,7 +1698,6 @@ def old_student_subscription(request):
             "عربي",
             "لغات",
         ]:
-
             context["error"] = (
                 "اختاري نوع التعليم."
             )
@@ -1372,10 +1709,7 @@ def old_student_subscription(request):
             )
 
         student_obj.grade = selected_grade
-
-        student_obj.school_type = (
-            selected_school_type
-        )
+        student_obj.school_type = selected_school_type
 
         student_obj.save(
             update_fields=[
@@ -1396,67 +1730,49 @@ def old_student_subscription(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Logout
-# ====================================================
+# =========================================================
 
 def student_logout(request):
-
     logout(request)
-
-    return redirect(
-        "home"
-    )
+    return redirect("home")
 
 
-# ====================================================
+# =========================================================
 # Student Dashboard
-# ====================================================
+# =========================================================
 
 @login_required
 def student_dashboard(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj:
         return redirect("student")
 
-    if not student_obj.is_active:
-
-        pending_request = (
-            get_latest_pending_request(
-                student_obj
-            )
-        )
-
-        if pending_request:
-            return redirect("subscription")
-
-        rejected_request = (
-            get_latest_rejected_request(
-                student_obj
-            )
-        )
-
-        if rejected_request:
-
-            return render(
-                request,
-                "main/old_student.html",
-                {
-                    "student": student_obj,
-                    "rejected_request": rejected_request,
-                    "support_whatsapp": build_whatsapp_link(
-                        get_platform_settings().whatsapp_number
-                    ),
-                },
-            )
-
-        return redirect(
-            "old_student_subscription"
-        )
-
     settings_obj = get_platform_settings()
+
+    if not student_obj.is_active:
+        pending_request = get_latest_pending_request(
+            student_obj
+        )
+
+        return render(
+            request,
+            "main/student_dashboard.html",
+            {
+                "student": student_obj,
+                "pending_request": pending_request,
+                "subjects": [],
+                "skills": [],
+                "curriculum_open": False,
+                "skills_open": False,
+                "vacation": False,
+                "support_whatsapp": build_whatsapp_link(
+                    settings_obj.whatsapp_number
+                ),
+            },
+        )
 
     curriculum_open = is_curriculum_open(
         settings_obj
@@ -1474,6 +1790,18 @@ def student_dashboard(request):
         student_obj
     )
 
+    curriculum_progress = (
+        get_subject_progress_data(
+            student_obj
+        )
+    )
+
+    skills_progress = (
+        get_skill_progress_data(
+            student_obj
+        )
+    )
+
     return render(
         request,
         "main/student_dashboard.html",
@@ -1481,6 +1809,14 @@ def student_dashboard(request):
             "student": student_obj,
             "subjects": subjects,
             "skills": skills,
+
+            "curriculum_progress": (
+                curriculum_progress
+            ),
+            "skills_progress": (
+                skills_progress
+            ),
+
             "curriculum_open": curriculum_open,
             "skills_open": skills_open,
             "vacation": settings_obj.is_vacation_now(),
@@ -1491,13 +1827,12 @@ def student_dashboard(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Curriculum Page
-# ====================================================
+# =========================================================
 
 @login_required
 def curriculum_page(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
@@ -1513,12 +1848,21 @@ def curriculum_page(request):
         student_obj
     )
 
+    progress = get_subject_progress_data(
+        student_obj
+    )
+
     return render(
         request,
         "main/curriculum_page.html",
         {
             "student": student_obj,
             "subjects": subjects,
+
+            # بيانات التقدم الجديدة
+            "progress": progress,
+            "curriculum_progress": progress,
+
             "curriculum_open": curriculum_open,
             "support_whatsapp": build_whatsapp_link(
                 settings_obj.whatsapp_number
@@ -1527,13 +1871,12 @@ def curriculum_page(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Skills Page
-# ====================================================
+# =========================================================
 
 @login_required
 def skills_page(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
@@ -1545,12 +1888,21 @@ def skills_page(request):
         student_obj
     )
 
+    progress = get_skill_progress_data(
+        student_obj
+    )
+
     return render(
         request,
         "main/skills_page.html",
         {
             "student": student_obj,
             "skills": skills,
+
+            # بيانات التقدم الجديدة
+            "progress": progress,
+            "skills_progress": progress,
+
             "skills_open": is_skills_open(
                 settings_obj
             ),
@@ -1561,23 +1913,20 @@ def skills_page(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Subject Lessons
-# ====================================================
+# =========================================================
 
 @login_required
-def subject_lessons(
-    request,
-    subject,
-):
-
+def subject_lessons(request, subject):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
         return redirect("old_student")
 
     subscription_obj = (
-        SubjectSubscription.objects.filter(
+        SubjectSubscription.objects
+        .filter(
             student=student_obj,
             subject=subject,
             is_active=True,
@@ -1585,8 +1934,9 @@ def subject_lessons(
         .first()
     )
 
-    if not subscription_obj:
+    settings_obj = get_platform_settings()
 
+    if not subscription_obj:
         return render(
             request,
             "main/subject_lessons.html",
@@ -1595,7 +1945,7 @@ def subject_lessons(
                 "subject": subject,
                 "subscription": None,
                 "support_whatsapp": build_whatsapp_link(
-                    get_platform_settings().whatsapp_number
+                    settings_obj.whatsapp_number
                 ),
             },
         )
@@ -1603,7 +1953,6 @@ def subject_lessons(
     subscription_obj.check_expired()
 
     if not subscription_obj.is_usable:
-
         return render(
             request,
             "main/subject_lessons.html",
@@ -1613,7 +1962,7 @@ def subject_lessons(
                 "subscription": subscription_obj,
                 "locked_subject": True,
                 "support_whatsapp": build_whatsapp_link(
-                    get_platform_settings().whatsapp_number
+                    settings_obj.whatsapp_number
                 ),
             },
         )
@@ -1624,37 +1973,41 @@ def subject_lessons(
     )
 
     lessons = (
-        Lesson.objects.filter(
+        Lesson.objects
+        .filter(
             grade=student_obj.grade,
             school_type=student_obj.school_type,
             subject=subject,
             is_active=True,
         )
-        .order_by("created_at")
+        .order_by("created_at", "id")
     )
 
     homeworks = (
-        Homework.objects.filter(
+        Homework.objects
+        .filter(
             grade=student_obj.grade,
             school_type=student_obj.school_type,
             subject=subject,
             is_active=True,
         )
-        .order_by("-created_at")
+        .order_by("-created_at", "-id")
     )
 
     exams = (
-        Exam.objects.filter(
+        Exam.objects
+        .filter(
             grade=student_obj.grade,
             school_type=student_obj.school_type,
             subject=subject,
             is_active=True,
         )
-        .order_by("-created_at")
+        .order_by("-created_at", "-id")
     )
 
     homework_results = (
-        HomeworkResult.objects.filter(
+        HomeworkResult.objects
+        .filter(
             student=student_obj,
             homework__subject=subject,
         )
@@ -1663,7 +2016,8 @@ def subject_lessons(
     )
 
     exam_results = (
-        ExamResult.objects.filter(
+        ExamResult.objects
+        .filter(
             student=student_obj,
             exam__subject=subject,
         )
@@ -1673,12 +2027,79 @@ def subject_lessons(
 
     submissions = {
         submission.homework_id: submission
-        for submission
-        in HomeworkSubmission.objects.filter(
-            student=student_obj,
-            homework__subject=subject,
+        for submission in (
+            HomeworkSubmission.objects
+            .filter(
+                student=student_obj,
+                homework__subject=subject,
+            )
         )
     }
+
+    # حالة مشاهدة كل حصة
+    lesson_watch_stats = {
+        stat.lesson_id: stat
+        for stat in (
+            LessonWatchStat.objects
+            .filter(
+                student=student_obj,
+                lesson__in=lessons,
+            )
+        )
+    }
+
+    lesson_progress = []
+
+    for lesson in lessons:
+        stat = lesson_watch_stats.get(
+            lesson.id
+        )
+
+        is_watched = bool(
+            stat
+            and (
+                stat.view_count > 0
+                or stat.watch_seconds > 0
+            )
+        )
+
+        related_homeworks = []
+
+        for homework in homeworks:
+            if getattr(
+                homework,
+                "lesson_id",
+                None,
+            ) == lesson.id:
+                related_homeworks.append(
+                    {
+                        "homework": homework,
+                        "submission": submissions.get(
+                            homework.id
+                        ),
+                        "submitted": bool(
+                            submissions.get(
+                                homework.id
+                            )
+                            and submissions.get(
+                                homework.id
+                            ).status
+                            in [
+                                "submitted",
+                                "graded",
+                            ]
+                        ),
+                    }
+                )
+
+        lesson_progress.append(
+            {
+                "lesson": lesson,
+                "watch_stat": stat,
+                "is_watched": is_watched,
+                "homeworks": related_homeworks,
+            }
+        )
 
     remaining_lessons = (
         subscription_obj.lessons_remaining
@@ -1688,13 +2109,9 @@ def subject_lessons(
     upload_error = None
 
     if request.method == "POST":
-
-        action = request.POST.get(
-            "action"
-        )
+        action = request.POST.get("action")
 
         if action == "upload_homework":
-
             homework_id = request.POST.get(
                 "homework_id"
             )
@@ -1704,7 +2121,8 @@ def subject_lessons(
             )
 
             homework = (
-                Homework.objects.filter(
+                Homework.objects
+                .filter(
                     id=homework_id,
                     subject=subject,
                     grade=student_obj.grade,
@@ -1716,21 +2134,17 @@ def subject_lessons(
             )
 
             if not homework:
-
-                upload_error = (
-                    "الواجب غير موجود."
-                )
+                upload_error = "الواجب غير موجود."
 
             elif not uploaded_file:
-
                 upload_error = (
                     "من فضلك اختاري ملف الإجابة."
                 )
 
             else:
-
                 submission, _ = (
-                    HomeworkSubmission.objects.get_or_create(
+                    HomeworkSubmission.objects
+                    .get_or_create(
                         student=student_obj,
                         homework=homework,
                     )
@@ -1740,21 +2154,29 @@ def subject_lessons(
                     uploaded_file
                 )
 
-                submission.status = (
-                    "submitted"
-                )
+                submission.status = "submitted"
+
+                if hasattr(
+                    submission,
+                    "submitted_at",
+                ):
+                    submission.submitted_at = (
+                        timezone.now()
+                    )
+
+                if hasattr(
+                    submission,
+                    "graded_at",
+                ):
+                    submission.graded_at = None
 
                 submission.save()
 
-                submissions[
-                    homework.id
-                ] = submission
+                submissions[homework.id] = submission
 
                 upload_message = (
                     "تم رفع إجابة الواجب بنجاح ✅"
                 )
-
-    settings_obj = get_platform_settings()
 
     return render(
         request,
@@ -1771,6 +2193,11 @@ def subject_lessons(
             "exam_results": exam_results,
             "remaining_lessons": remaining_lessons,
             "submissions": submissions,
+
+            # الجديد
+            "lesson_progress": lesson_progress,
+            "lesson_watch_stats": lesson_watch_stats,
+
             "upload_message": upload_message,
             "upload_error": upload_error,
             "support_whatsapp": build_whatsapp_link(
@@ -1780,23 +2207,16 @@ def subject_lessons(
     )
 
 
-# ====================================================
+# =========================================================
 # Protected Lesson Video
-# ====================================================
+# =========================================================
 
 @login_required
-def protected_lesson_video(
-    request,
-    lesson_id,
-):
-
+def protected_lesson_video(request, lesson_id):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
-        raise Http404(
-            "لا يوجد وصول."
-        )
+        raise Http404("لا يوجد وصول.")
 
     lesson = get_object_or_404(
         Lesson,
@@ -1805,7 +2225,8 @@ def protected_lesson_video(
     )
 
     subscription_obj = (
-        SubjectSubscription.objects.filter(
+        SubjectSubscription.objects
+        .filter(
             student=student_obj,
             subject=lesson.subject,
             is_active=True,
@@ -1814,39 +2235,23 @@ def protected_lesson_video(
     )
 
     if not subscription_obj:
-
-        raise Http404(
-            "لا يوجد اشتراك."
-        )
+        raise Http404("لا يوجد اشتراك.")
 
     subscription_obj.check_expired()
 
     if not subscription_obj.is_usable:
-
-        raise Http404(
-            "الاشتراك غير متاح."
-        )
+        raise Http404("الاشتراك غير متاح.")
 
     if (
-        lesson.grade
-        != student_obj.grade
-        or lesson.school_type
-        != student_obj.school_type
+        lesson.grade != student_obj.grade
+        or lesson.school_type != student_obj.school_type
     ):
-
-        raise Http404(
-            "لا يوجد وصول."
-        )
+        raise Http404("لا يوجد وصول.")
 
     if not lesson.video:
+        raise Http404("الفيديو غير موجود.")
 
-        raise Http404(
-            "الفيديو غير موجود."
-        )
-
-    video_file = lesson.video.open(
-        "rb"
-    )
+    video_file = lesson.video.open("rb")
 
     return FileResponse(
         video_file,
@@ -1854,25 +2259,18 @@ def protected_lesson_video(
     )
 
 
-# ====================================================
+# =========================================================
 # Lesson Watch Progress
-# ====================================================
+# =========================================================
 
 @login_required
 @require_POST
-def lesson_watch_progress(
-    request,
-    lesson_id,
-):
-
+def lesson_watch_progress(request, lesson_id):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
         return JsonResponse(
-            {
-                "success": False
-            },
+            {"success": False},
             status=403,
         )
 
@@ -1883,7 +2281,8 @@ def lesson_watch_progress(
     )
 
     subscription_obj = (
-        SubjectSubscription.objects.filter(
+        SubjectSubscription.objects
+        .filter(
             student=student_obj,
             subject=lesson.subject,
             is_active=True,
@@ -1892,27 +2291,20 @@ def lesson_watch_progress(
     )
 
     if not subscription_obj:
-
         return JsonResponse(
-            {
-                "success": False
-            },
+            {"success": False},
             status=403,
         )
 
     subscription_obj.check_expired()
 
     if not subscription_obj.is_usable:
-
         return JsonResponse(
-            {
-                "success": False
-            },
+            {"success": False},
             status=403,
         )
 
     try:
-
         watch_seconds = int(
             request.POST.get(
                 "watch_seconds",
@@ -1931,12 +2323,12 @@ def lesson_watch_progress(
         ValueError,
         TypeError,
     ):
-
         watch_seconds = 0
         last_position = 0.0
 
     stat, created = (
-        LessonWatchStat.objects.get_or_create(
+        LessonWatchStat.objects
+        .get_or_create(
             student=student_obj,
             lesson=lesson,
         )
@@ -1954,9 +2346,7 @@ def lesson_watch_progress(
         watch_seconds,
     )
 
-    stat.last_position = (
-        last_position
-    )
+    stat.last_position = last_position
 
     stat.save()
 
@@ -1966,7 +2356,6 @@ def lesson_watch_progress(
         and subscription_obj.watched_lessons
         < subscription_obj.max_lessons
     ):
-
         subscription_obj.watched_lessons += 1
 
         subscription_obj.save(
@@ -1986,23 +2375,16 @@ def lesson_watch_progress(
     )
 
 
-# ====================================================
-# Electronic Homework - المواد
-# ====================================================
+# =========================================================
+# Electronic Homework
+# =========================================================
 
 @login_required
-def electronic_homework(
-    request,
-    homework_id,
-):
-
+def electronic_homework(request, homework_id):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
-        return redirect(
-            "old_student"
-        )
+        return redirect("old_student")
 
     homework = get_object_or_404(
         Homework,
@@ -2012,18 +2394,14 @@ def electronic_homework(
     )
 
     if (
-        homework.grade
-        != student_obj.grade
-        or homework.school_type
-        != student_obj.school_type
+        homework.grade != student_obj.grade
+        or homework.school_type != student_obj.school_type
     ):
-
-        raise Http404(
-            "لا يوجد وصول."
-        )
+        raise Http404("لا يوجد وصول.")
 
     subscription_obj = (
-        SubjectSubscription.objects.filter(
+        SubjectSubscription.objects
+        .filter(
             student=student_obj,
             subject=homework.subject,
             is_active=True,
@@ -2032,7 +2410,6 @@ def electronic_homework(
     )
 
     if not subscription_obj:
-
         raise Http404(
             "لا يوجد اشتراك في المادة."
         )
@@ -2040,7 +2417,6 @@ def electronic_homework(
     subscription_obj.check_expired()
 
     if not subscription_obj.is_usable:
-
         raise Http404(
             "الاشتراك غير متاح."
         )
@@ -2048,9 +2424,9 @@ def electronic_homework(
     questions = homework.questions.all()
 
     if request.method == "POST":
-
         submission, _ = (
-            HomeworkSubmission.objects.get_or_create(
+            HomeworkSubmission.objects
+            .get_or_create(
                 student=student_obj,
                 homework=homework,
             )
@@ -2062,7 +2438,6 @@ def electronic_homework(
         max_score = 0
 
         for question in questions:
-
             selected_answer = request.POST.get(
                 f"question_{question.id}",
                 "",
@@ -2080,7 +2455,6 @@ def electronic_homework(
             )
 
             score += mark_obtained
-
             max_score += question.mark
 
             HomeworkAnswer.objects.create(
@@ -2092,12 +2466,27 @@ def electronic_homework(
             )
 
         submission.status = "graded"
-        submission.graded_at = timezone.now()
+
+        if hasattr(
+            submission,
+            "submitted_at",
+        ):
+            submission.submitted_at = (
+                submission.submitted_at
+                or timezone.now()
+            )
+
+        if hasattr(
+            submission,
+            "graded_at",
+        ):
+            submission.graded_at = timezone.now()
 
         submission.save()
 
         result, _ = (
-            HomeworkResult.objects.get_or_create(
+            HomeworkResult.objects
+            .get_or_create(
                 student=student_obj,
                 homework=homework,
             )
@@ -2114,7 +2503,6 @@ def electronic_homework(
         percentage = 0
 
         if max_score > 0:
-
             percentage = round(
                 (score / max_score) * 100,
                 1,
@@ -2130,8 +2518,7 @@ def electronic_homework(
                 "score": score,
                 "correct": sum(
                     1
-                    for answer
-                    in submission.answers.all()
+                    for answer in submission.answers.all()
                     if answer.is_correct
                 ),
                 "total": questions.count(),
@@ -2151,20 +2538,16 @@ def electronic_homework(
     )
 
 
-# ====================================================
+# =========================================================
 # Add Content
-# ====================================================
+# =========================================================
 
 @login_required
 def add_content(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
-        return redirect(
-            "old_student"
-        )
+        return redirect("old_student")
 
     settings_obj = get_platform_settings()
 
@@ -2177,17 +2560,13 @@ def add_content(request):
     )
 
     available_subjects = (
-        get_available_subjects(
-            student_obj
-        )
+        get_available_subjects(student_obj)
         if curriculum_open
         else AvailableSubject.objects.none()
     )
 
     available_skills = (
-        get_available_skills(
-            student_obj
-        )
+        get_available_skills(student_obj)
         if skills_open
         else Skill.objects.none()
     )
@@ -2196,77 +2575,35 @@ def add_content(request):
         available_subjects
     )
 
-    subject_price_data = (
-        get_subject_price_data(
-            student_obj,
-            available_subjects_list,
-        )
+    subject_price_data = get_subject_price_data(
+        student_obj,
+        available_subjects_list,
     )
 
     common_context = {
         "student": student_obj,
-
-        "available_subjects": (
-            available_subjects_list
-        ),
-
-        "subject_price_data": (
-            subject_price_data
-        ),
-
-        "available_skills": (
-            available_skills
-        ),
-
-        "subject_price": subject_monthly_price(
-            student_obj
-        ),
-
-        "monthly_subject_price": (
-            subject_monthly_price(
-                student_obj
-            )
-        ),
-
-        "full_term_price": (
-            subject_full_term_price(
-                student_obj
-            )
-        ),
-
-        "curriculum_open": (
-            curriculum_open
-        ),
-
-        "skills_open": (
-            skills_open
-        ),
-
+        "available_subjects": available_subjects_list,
+        "subject_price_data": subject_price_data,
+        "available_skills": available_skills,
+        "curriculum_open": curriculum_open,
+        "skills_open": skills_open,
         "support_whatsapp": build_whatsapp_link(
             settings_obj.whatsapp_number
         ),
-
         "vodafone_number": (
             settings_obj.vodafone_cash_number
         ),
-
         "plan": "monthly",
-
         "selected_subjects": [],
-
         "selected_skills": [],
     }
 
     if request.method == "POST":
-
-        pending_request = (
-            get_latest_pending_request(
-                student_obj
-            )
+        pending_request = get_latest_pending_request(
+            student_obj
         )
 
         if pending_request:
-
             common_context["error"] = (
                 "لديك طلب إضافة قيد المراجعة بالفعل."
             )
@@ -2286,7 +2623,6 @@ def add_content(request):
             "monthly",
             "full_term",
         ]:
-
             plan = "monthly"
 
         common_context["plan"] = plan
@@ -2312,7 +2648,6 @@ def add_content(request):
         )
 
         if not transfer_image:
-
             common_context["error"] = (
                 "من فضلك ارفعي صورة التحويل."
             )
@@ -2325,37 +2660,19 @@ def add_content(request):
 
         available_subject_map = {
             subject.subject_name: subject
-            for subject
-            in available_subjects_list
+            for subject in available_subjects_list
         }
 
         selected_subjects = [
             subject_name
-            for subject_name
-            in selected_subjects
-            if subject_name
-            in available_subject_map
+            for subject_name in selected_subjects
+            if subject_name in available_subject_map
         ]
 
-        if plan == "full_term":
-
-            if not curriculum_open:
-
-                common_context["error"] = (
-                    "المنهج غير متاح حاليًا."
-                )
-
-                return render(
-                    request,
-                    "main/add_content.html",
-                    common_context,
-                )
-
-        elif (
+        if (
             selected_subjects
             and not curriculum_open
         ):
-
             common_context["error"] = (
                 "المنهج غير متاح حاليًا."
             )
@@ -2368,39 +2685,32 @@ def add_content(request):
 
         available_skill_map = {
             str(skill.id): skill
-            for skill
-            in available_skills
+            for skill in available_skills
         }
 
         selected_skills = []
 
         for value in selected_skill_values:
-
             skill = available_skill_map.get(
                 str(value)
             )
 
             if skill:
-
-                selected_skills.append(
-                    skill
-                )
+                selected_skills.append(skill)
 
         selected_skills = list(
             {
                 skill.id: skill
-                for skill
-                in selected_skills
+                for skill in selected_skills
             }.values()
         )
 
         if (
-            not selected_subjects
-            and not selected_skills
+            selected_skills
+            and not skills_open
         ):
-
             common_context["error"] = (
-                "اختاري مادة أو مهارة."
+                "المهارات غير متاحة حاليًا."
             )
 
             return render(
@@ -2409,76 +2719,38 @@ def add_content(request):
                 common_context,
             )
 
-        selected_skill_names = {
-            skill.name
-            for skill
-            in selected_skills
-        }
+        if (
+            not selected_subjects
+            and not selected_skills
+        ):
+            common_context["error"] = (
+                "اختاري مادة أو مهارة واحدة على الأقل."
+            )
 
-        for skill in selected_skills:
-
-            missing = []
-
-            for prerequisite in (
-                skill.prerequisites.all()
-            ):
-
-                already_active = (
-                    SkillSubscription.objects.filter(
-                        student=student_obj,
-                        skill=prerequisite,
-                        is_active=True,
-                    ).exists()
-                )
-
-                if (
-                    prerequisite.name
-                    not in selected_skill_names
-                    and not already_active
-                ):
-
-                    missing.append(
-                        prerequisite.name
-                    )
-
-            if missing:
-
-                common_context["error"] = (
-                    f"المهارة {skill.name} "
-                    f"تحتاج أولًا إلى: "
-                    + " + ".join(missing)
-                )
-
-                return render(
-                    request,
-                    "main/add_content.html",
-                    common_context,
-                )
+            return render(
+                request,
+                "main/add_content.html",
+                common_context,
+            )
 
         curriculum_amount = 0
 
         for subject_name in selected_subjects:
-
-            subject_obj = (
-                available_subject_map.get(
-                    subject_name
-                )
+            subject_obj = available_subject_map.get(
+                subject_name
             )
 
             if not subject_obj:
                 continue
 
             if plan == "full_term":
-
                 curriculum_amount += (
                     get_subject_full_term_price(
                         student_obj,
                         subject_obj,
                     )
                 )
-
             else:
-
                 curriculum_amount += (
                     get_subject_monthly_price(
                         student_obj,
@@ -2488,8 +2760,7 @@ def add_content(request):
 
         skills_amount = sum(
             skill.course_price
-            for skill
-            in selected_skills
+            for skill in selected_skills
         )
 
         total = (
@@ -2501,56 +2772,50 @@ def add_content(request):
             selected_subjects
             and selected_skills
         ):
-
-            subscription_type = "mixed"
+            if plan == "full_term":
+                subscription_type = "full_term"
+            else:
+                subscription_type = "mixed"
 
         elif selected_skills:
-
             subscription_type = "skills"
 
         elif plan == "full_term":
-
             subscription_type = "full_term"
 
         else:
-
             subscription_type = "subjects"
 
         SubscriptionRequest.objects.create(
             student=student_obj,
             request_type="addition",
             amount=total,
-            curriculum_amount=(
-                curriculum_amount
-            ),
-            skills_amount=(
-                skills_amount
-            ),
-            subscription_type=(
-                subscription_type
-            ),
-            selected_subjects=(
-                selected_subjects
-            ),
+            curriculum_amount=curriculum_amount,
+            skills_amount=skills_amount,
+            subscription_type=subscription_type,
+            selected_subjects=selected_subjects,
             selected_skills=[
                 skill.name
-                for skill
-                in selected_skills
+                for skill in selected_skills
             ],
-            transfer_image=(
-                transfer_image
-            ),
+            transfer_image=transfer_image,
             status="pending",
         )
+
+        common_context["success"] = True
+        common_context["amount"] = total
+        common_context["selected_subjects"] = (
+            selected_subjects
+        )
+        common_context["selected_skills"] = [
+            skill.name
+            for skill in selected_skills
+        ]
 
         return render(
             request,
             "main/add_content.html",
-            {
-                **common_context,
-                "success": True,
-                "amount": total,
-            },
+            common_context,
         )
 
     return render(
@@ -2560,23 +2825,16 @@ def add_content(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Skill Detail
-# ====================================================
+# =========================================================
 
 @login_required
-def skill_detail(
-    request,
-    skill_id,
-):
-
+def skill_detail(request, skill_id):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
-        return redirect(
-            "old_student"
-        )
+        return redirect("old_student")
 
     skill = get_object_or_404(
         Skill,
@@ -2585,7 +2843,8 @@ def skill_detail(
     )
 
     subscription_obj = (
-        SkillSubscription.objects.filter(
+        SkillSubscription.objects
+        .filter(
             student=student_obj,
             skill=skill,
             is_active=True,
@@ -2594,17 +2853,13 @@ def skill_detail(
     )
 
     if not subscription_obj:
-
         raise Http404(
             "المهارة غير مفعلة لهذا الطالب."
         )
 
-    # =================================================
-    # دروس المهارة
-    # =================================================
-
     lessons = (
-        SkillLesson.objects.filter(
+        SkillLesson.objects
+        .filter(
             skill=skill,
             is_active=True,
         )
@@ -2614,52 +2869,105 @@ def skill_detail(
         )
     )
 
-    # =================================================
-    # واجبات المهارة الجديدة
-    # =================================================
-
     skill_homeworks = (
-        SkillHomework.objects.filter(
+        SkillHomework.objects
+        .filter(
             skill=skill,
             is_active=True,
         )
-        .prefetch_related(
-            "questions"
-        )
-        .order_by(
-            "-created_at"
-        )
+        .prefetch_related("questions")
+        .order_by("created_at", "id")
     )
-
-    # =================================================
-    # تسليمات الطالب
-    # =================================================
 
     skill_homework_submissions = {
         submission.homework_id: submission
-        for submission
-        in SkillHomeworkSubmission.objects.filter(
-            student=student_obj,
-            homework__skill=skill,
+        for submission in (
+            SkillHomeworkSubmission.objects
+            .filter(
+                student=student_obj,
+                homework__skill=skill,
+            )
         )
     }
 
-    # =================================================
-    # نتائج الطالب
-    # =================================================
-
     skill_homework_results = (
-        SkillHomeworkResult.objects.filter(
+        SkillHomeworkResult.objects
+        .filter(
             student=student_obj,
             homework__skill=skill,
         )
-        .select_related(
-            "homework"
-        )
-        .order_by(
-            "-created_at"
-        )
+        .select_related("homework")
+        .order_by("-created_at")
     )
+
+    # حالة مشاهدة حصص المهارة
+    lesson_progress = []
+
+    for lesson in lessons:
+        stat = (
+            LessonWatchStat.objects
+            .filter(
+                student=student_obj,
+                lesson_id=lesson.id,
+            )
+            .first()
+        )
+
+        is_watched = bool(
+            stat
+            and (
+                stat.view_count > 0
+                or stat.watch_seconds > 0
+            )
+        )
+
+        related_homeworks = []
+
+        for homework in skill_homeworks:
+            if getattr(
+                homework,
+                "lesson_id",
+                None,
+            ) == lesson.id:
+
+                submission = (
+                    skill_homework_submissions.get(
+                        homework.id
+                    )
+                )
+
+                result = (
+                    skill_homework_results
+                    .filter(
+                        homework=homework
+                    )
+                    .first()
+                )
+
+                related_homeworks.append(
+                    {
+                        "homework": homework,
+                        "submission": submission,
+                        "result": result,
+                        "submitted": bool(
+                            submission
+                            and submission.status
+                            in [
+                                "submitted",
+                                "graded",
+                            ]
+                        ),
+                    }
+                )
+
+        lesson_progress.append(
+            {
+                "lesson": lesson,
+                "watch_stat": stat,
+                "is_watched": is_watched,
+                "homeworks": related_homeworks,
+            }
+        )
 
     settings_obj = get_platform_settings()
 
@@ -2668,68 +2976,162 @@ def skill_detail(
         "main/skill_detail.html",
         {
             "student": student_obj,
-
             "skill": skill,
-
             "subscription": subscription_obj,
-
             "lessons": lessons,
+            "skill_homeworks": skill_homeworks,
+            "homeworks": skill_homeworks,
 
-            # واجبات المهارات
-            "skill_homeworks": (
-                skill_homeworks
-            ),
-
-            "homeworks": (
-                skill_homeworks
-            ),
-
-            # التسليمات
             "skill_homework_submissions": (
                 skill_homework_submissions
             ),
+            "submissions": skill_homework_submissions,
 
-            "submissions": (
-                skill_homework_submissions
-            ),
-
-            # النتائج
             "skill_homework_results": (
                 skill_homework_results
             ),
+            "homework_results": skill_homework_results,
 
-            "homework_results": (
-                skill_homework_results
-            ),
+            # الجديد
+            "lesson_progress": lesson_progress,
 
             "support_whatsapp": build_whatsapp_link(
                 settings_obj.whatsapp_number
             ),
         },
     )
-
-
-# ====================================================
-# Skill Homework Detail
-# ====================================================
+ # =========================================================
+# تسليم واجب المهارات
+# =========================================================
 
 @login_required
-def skill_homework_detail(
-    request,
-    homework_id,
-):
-
+def skill_homework_detail(request, homework_id):
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
+        return redirect("old_student")
 
-        return redirect(
-            "old_student"
+    homework = get_object_or_404(
+        SkillHomework,
+        pk=homework_id,
+        is_active=True,
+    )
+
+    # التأكد أن الطالب مشترك في المهارة
+    subscription_obj = (
+        SkillSubscription.objects
+        .filter(
+            student=student_obj,
+            skill=homework.skill,
+            is_active=True,
+        )
+        .first()
+    )
+
+    if not subscription_obj:
+        raise Http404(
+            "هذا الواجب غير متاح لهذا الطالب."
         )
 
-    # =================================================
-    # الحصول على الواجب
-    # =================================================
+    # الواجب المرتبط بالحصة
+    lesson = homework.lesson
+
+    # التسليم السابق إن وجد
+    submission = (
+        SkillHomeworkSubmission.objects
+        .filter(
+            student=student_obj,
+            homework=homework,
+        )
+        .first()
+    )
+
+    # نتيجة الواجب إن وجدت
+    result = (
+        SkillHomeworkResult.objects
+        .filter(
+            student=student_obj,
+            homework=homework,
+        )
+        .first()
+    )
+
+    if request.method == "POST":
+
+        uploaded_file = request.FILES.get(
+            "uploaded_file"
+        )
+
+        if not uploaded_file:
+            messages.error(
+                request,
+                "من فضلك ارفعي صورة أو فيديو للحل."
+            )
+
+        else:
+
+            if submission:
+                submission.uploaded_file = uploaded_file
+                submission.status = "submitted"
+                submission.submitted_at = timezone.now()
+                submission.save(
+                    update_fields=[
+                        "uploaded_file",
+                        "status",
+                        "submitted_at",
+                    ]
+                )
+
+            else:
+                submission = (
+                    SkillHomeworkSubmission.objects.create(
+                        student=student_obj,
+                        homework=homework,
+                        uploaded_file=uploaded_file,
+                        status="submitted",
+                        submitted_at=timezone.now(),
+                    )
+                )
+
+            messages.success(
+                request,
+                "تم تسليم الواجب بنجاح."
+            )
+
+            return redirect(
+                "skill_homework_detail",
+                homework_id=homework.id,
+            )
+
+    settings_obj = get_platform_settings()
+
+    return render(
+        request,
+        "main/skill_homework_detail.html",
+        {
+            "student": student_obj,
+            "skill": homework.skill,
+            "homework": homework,
+            "lesson": lesson,
+            "subscription": subscription_obj,
+            "submission": submission,
+            "result": result,
+            "support_whatsapp": build_whatsapp_link(
+                settings_obj.whatsapp_number
+            ),
+        },
+    )
+
+# =========================================================
+# Skill Homework Detail
+# =========================================================
+
+@login_required
+def skill_homework_detail(request, homework_id):
+    student_obj = get_current_student(request)
+
+    if not student_obj or not student_obj.is_active:
+        return redirect("old_student")
 
     homework = get_object_or_404(
         SkillHomework.objects
@@ -2739,12 +3141,9 @@ def skill_homework_detail(
         is_active=True,
     )
 
-    # =================================================
-    # التأكد من الاشتراك في المهارة
-    # =================================================
-
     subscription_obj = (
-        SkillSubscription.objects.filter(
+        SkillSubscription.objects
+        .filter(
             student=student_obj,
             skill=homework.skill,
             is_active=True,
@@ -2753,78 +3152,52 @@ def skill_homework_detail(
     )
 
     if not subscription_obj:
-
         raise Http404(
             "هذا الواجب غير متاح لك."
         )
 
-    # =================================================
-    # التسليم السابق
-    # =================================================
-
     submission = (
-        SkillHomeworkSubmission.objects.filter(
+        SkillHomeworkSubmission.objects
+        .filter(
             student=student_obj,
             homework=homework,
         )
         .first()
     )
-
-    # =================================================
-    # النتيجة السابقة
-    # =================================================
 
     result = (
-        SkillHomeworkResult.objects.filter(
+        SkillHomeworkResult.objects
+        .filter(
             student=student_obj,
             homework=homework,
         )
         .first()
     )
 
-    # =================================================
-    # الواجب الورقي
-    # =================================================
-
     if homework.homework_type == "paper":
-
         if request.method == "POST":
-
-            uploaded_file = (
-                request.FILES.get(
-                    "uploaded_file"
-                )
+            uploaded_file = request.FILES.get(
+                "uploaded_file"
             )
 
             if not uploaded_file:
-
                 messages.error(
                     request,
-                    "من فضلك اختاري ملف الإجابة أولًا."
+                    "من فضلك اختاري ملف الإجابة أولًا.",
                 )
 
             else:
-
                 if submission:
-
                     submission.uploaded_file = (
                         uploaded_file
                     )
 
-                    submission.status = (
-                        "submitted"
-                    )
-
-                    submission.submitted_at = (
-                        timezone.now()
-                    )
-
+                    submission.status = "submitted"
+                    submission.submitted_at = timezone.now()
                     submission.graded_at = None
-
                     submission.save()
 
                 else:
-
                     submission = (
                         SkillHomeworkSubmission.objects.create(
                             student=student_obj,
@@ -2837,7 +3210,7 @@ def skill_homework_detail(
 
                 messages.success(
                     request,
-                    "تم تسليم الواجب الورقي بنجاح ✅"
+                    "تم تسليم الواجب الورقي بنجاح ✅",
                 )
 
                 return redirect(
@@ -2860,10 +3233,6 @@ def skill_homework_detail(
             },
         )
 
-    # =================================================
-    # الواجب الإلكتروني
-    # =================================================
-
     questions = (
         homework.questions.all()
         .order_by(
@@ -2872,21 +3241,15 @@ def skill_homework_detail(
         )
     )
 
-    # =================================================
-    # لو الواجب اتعمل قبل كده
-    # =================================================
-
     if (
         request.method == "GET"
         and submission
         and submission.status == "graded"
         and result
     ):
-
         percentage = 0
 
         if result.max_score:
-
             percentage = round(
                 (
                     result.score
@@ -2912,19 +3275,11 @@ def skill_homework_detail(
             },
         )
 
-    # =================================================
-    # إرسال الواجب الإلكتروني
-    # =================================================
-
     if request.method == "POST":
-
-        # لو كان هناك تسليم قديم
         if submission:
-
             submission.answers.all().delete()
 
         else:
-
             submission = (
                 SkillHomeworkSubmission.objects.create(
                     student=student_obj,
@@ -2935,13 +3290,10 @@ def skill_homework_detail(
             )
 
         score = 0
-
         max_score = 0
-
         correct_count = 0
 
         for question in questions:
-
             selected_answer = (
                 request.POST.get(
                     f"question_{question.id}",
@@ -2962,11 +3314,9 @@ def skill_homework_detail(
             )
 
             score += mark_obtained
-
             max_score += question.mark
 
             if is_correct:
-
                 correct_count += 1
 
             SkillHomeworkAnswer.objects.create(
@@ -2977,10 +3327,6 @@ def skill_homework_detail(
                 mark_obtained=mark_obtained,
             )
 
-        # =================================================
-        # حفظ حالة التسليم
-        # =================================================
-
         submission.status = "graded"
 
         submission.submitted_at = (
@@ -2988,27 +3334,20 @@ def skill_homework_detail(
             or timezone.now()
         )
 
-        submission.graded_at = (
-            timezone.now()
-        )
+        submission.graded_at = timezone.now()
 
         submission.save()
 
-        # =================================================
-        # حفظ النتيجة
-        # =================================================
-
-        result, created = (
-            SkillHomeworkResult.objects.get_or_create(
+        result, _ = (
+            SkillHomeworkResult.objects
+            .get_or_create(
                 student=student_obj,
                 homework=homework,
             )
         )
 
         result.score = score
-
         result.max_score = max_score
-
         result.feedback = (
             "تم تصحيح الواجب الإلكتروني تلقائيًا."
         )
@@ -3018,7 +3357,6 @@ def skill_homework_detail(
         percentage = 0
 
         if max_score > 0:
-
             percentage = round(
                 (
                     score
@@ -3043,10 +3381,6 @@ def skill_homework_detail(
             },
         )
 
-    # =================================================
-    # عرض الواجب
-    # =================================================
-
     return render(
         request,
         "main/skill_homework_detail.html",
@@ -3063,21 +3397,230 @@ def skill_homework_detail(
         },
     )
 
+# =========================================================
+# ولي الأمر
+# =========================================================
 
-# ====================================================
-# AI Chat
-# ====================================================
+# =========================================================
+# ولي الأمر
+# =========================================================
 
-@login_required
+def parent(request):
+    """
+    ولي الأمر يدخل رقم الهاتف فقط.
+
+    النظام يبحث عن كل الطلاب الذين يحملون
+    نفس رقم ولي الأمر الموجود في Student.parent_phone.
+    """
+
+    error = None
+    students = Student.objects.none()
+    parent_phone = ""
+
+    if request.method == "POST":
+
+        parent_phone = (
+            request.POST.get(
+                "parent_phone",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if not parent_phone:
+
+            error = (
+                "من فضلك اكتبي رقم ولي الأمر."
+            )
+
+        else:
+
+            students = (
+                Student.objects
+                .filter(
+                    parent_phone=parent_phone
+                )
+                .order_by("student_name")
+            )
+
+            if students.exists():
+
+                # حفظ رقم ولي الأمر في الجلسة
+                request.session["parent_phone"] = (
+                    parent_phone
+                )
+
+            else:
+
+                error = (
+                    "رقم ولي الأمر غير مسجل على المنصة."
+                )
+
+    settings_obj = get_platform_settings()
+
+    return render(
+        request,
+        "main/parent.html",
+        {
+            "students": students,
+            "parent_phone": parent_phone,
+            "error": error,
+            "support_whatsapp": build_whatsapp_link(
+                settings_obj.whatsapp_number
+            ),
+        },
+    )
+
+
+# =========================================================
+# صفحة الطالب لولي الأمر
+# =========================================================
+
+def parent_student(request, student_id):
+    """
+    عرض بيانات طالب معين لولي الأمر.
+
+    يتم التأكد أن رقم ولي الأمر المحفوظ في الجلسة
+    هو نفس الرقم الموجود في بيانات الطالب.
+    """
+
+    parent_phone = (
+        request.session.get(
+            "parent_phone",
+            "",
+        )
+        or ""
+    ).strip()
+
+    # لو ولي الأمر لم يدخل رقمه أولًا
+    if not parent_phone:
+
+        return redirect("parent")
+
+    # التأكد أن الطالب تابع لنفس رقم ولي الأمر
+    student_obj = get_object_or_404(
+        Student,
+        id=student_id,
+        parent_phone=parent_phone,
+    )
+
+    return render(
+        request,
+        "main/parent_student.html",
+        {
+            "student": student_obj,
+        },
+    )
+
+
+# =========================================================
+# منهج الطالب - لولي الأمر
+# =========================================================
+
+# =========================================================
+# منهج الطالب - لولي الأمر
+# =========================================================
+
+def parent_curriculum(request, student_id):
+    """
+    عرض منهج طالب معين لولي الأمر.
+
+    يتم التأكد أولًا أن الطالب مرتبط بنفس
+    رقم ولي الأمر الموجود في الجلسة.
+    """
+
+    parent_phone = (
+        request.session.get(
+            "parent_phone",
+            "",
+        )
+        or ""
+    ).strip()
+
+    # لو ولي الأمر لم يدخل رقمه أولًا
+    if not parent_phone:
+        return redirect("parent")
+
+    # التأكد أن الطالب تابع لرقم ولي الأمر
+    student_obj = get_object_or_404(
+        Student,
+        id=student_id,
+        parent_phone=parent_phone,
+    )
+
+    # بيانات تقدم الطالب في المنهج
+    progress = get_subject_progress_data(
+        student_obj
+    )
+
+    settings_obj = get_platform_settings()
+
+    return render(
+        request,
+        "main/parent_curriculum.html",
+        {
+            "student": student_obj,
+            "progress": progress,
+            "support_whatsapp": build_whatsapp_link(
+                settings_obj.whatsapp_number
+            ),
+        },
+    )
+# =========================================================
+# مهارات الطالب - لولي الأمر
+# =========================================================
+
+def parent_skills(request, student_id):
+    """
+    عرض مهارات طالب معين لولي الأمر.
+
+    يتم التأكد أولًا أن الطالب مرتبط بنفس
+    رقم ولي الأمر الموجود في الجلسة.
+    """
+
+    parent_phone = (
+        request.session.get(
+            "parent_phone",
+            "",
+        )
+        or ""
+    ).strip()
+
+    # لو ولي الأمر لم يدخل رقمه أولًا
+    if not parent_phone:
+        return redirect("parent")
+
+    # التأكد أن الطالب تابع لنفس رقم ولي الأمر
+    student_obj = get_object_or_404(
+        Student,
+        id=student_id,
+        parent_phone=parent_phone,
+    )
+
+    # بيانات تقدم الطالب في المهارات
+    progress = get_skill_progress_data(
+        student_obj
+    )
+
+    settings_obj = get_platform_settings()
+
+    return render(
+        request,
+        "main/parent_skills.html",
+        {
+            "student": student_obj,
+            "progress": progress,
+            "support_whatsapp": build_whatsapp_link(
+                settings_obj.whatsapp_number
+            ),
+        },
+    )
+
 def ai_chat(request):
-
     student_obj = get_current_student(request)
 
     if not student_obj or not student_obj.is_active:
-
-        return redirect(
-            "old_student"
-        )
+        return redirect("old_student")
 
     requested_subject = (
         request.GET.get(
@@ -3109,7 +3652,8 @@ def ai_chat(request):
     }
 
     active_skill_ids = set(
-        SkillSubscription.objects.filter(
+        SkillSubscription.objects
+        .filter(
             student=student_obj,
             is_active=True,
             skill__is_active=True,
@@ -3121,39 +3665,28 @@ def ai_chat(request):
     )
 
     context_type = None
-
     subject_name = ""
-
     skill_obj = None
 
     if (
         requested_subject
         and requested_subject in active_subjects
     ):
-
         context_type = "subject"
-
         subject_name = requested_subject
-
-        skill_obj = None
 
     elif (
         requested_skill_id
         and requested_skill_id.isdigit()
     ):
-
-        skill_id = int(
-            requested_skill_id
-        )
+        skill_id = int(requested_skill_id)
 
         if skill_id not in active_skill_ids:
-
-            return redirect(
-                "student_dashboard"
-            )
+            return redirect("student_dashboard")
 
         skill_obj = (
-            Skill.objects.filter(
+            Skill.objects
+            .filter(
                 pk=skill_id,
                 is_active=True,
             )
@@ -3161,45 +3694,32 @@ def ai_chat(request):
         )
 
         if not skill_obj:
-
-            return redirect(
-                "student_dashboard"
-            )
+            return redirect("student_dashboard")
 
         context_type = "skill"
 
-        subject_name = ""
-
     else:
-
-        return redirect(
-            "student_dashboard"
-        )
+        return redirect("student_dashboard")
 
     conversation = (
-        AIConversation.objects.filter(
+        AIConversation.objects
+        .filter(
             student=student_obj,
             status="open",
             context_type=context_type,
             subject=subject_name,
             skill=skill_obj,
         )
-        .order_by(
-            "-updated_at"
-        )
+        .order_by("-updated_at")
         .first()
     )
 
     if not conversation:
-
         if context_type == "subject":
-
             conversation_title = (
                 f"مساعد مادة {subject_name}"
             )
-
         else:
-
             conversation_title = (
                 f"مساعد مهارة {skill_obj.name}"
             )
@@ -3216,7 +3736,6 @@ def ai_chat(request):
         )
 
     if request.method == "POST":
-
         message_text = (
             request.POST.get(
                 "message",
@@ -3226,17 +3745,13 @@ def ai_chat(request):
         ).strip()
 
         uploaded_image = (
-            request.FILES.get(
-                "image"
-            )
+            request.FILES.get("image")
         )
 
         image_data_url = None
-
         image_error = None
 
         if uploaded_image:
-
             content_type = (
                 getattr(
                     uploaded_image,
@@ -3247,33 +3762,23 @@ def ai_chat(request):
             ).lower()
 
             if content_type not in ALLOWED_AI_IMAGE_TYPES:
-
                 image_error = (
-                    "من فضلك اختاري صورة بصيغة "
-                    "JPG أو PNG أو WEBP."
+                    "من فضلك اختاري صورة بصيغة JPG أو PNG أو WEBP."
                 )
 
             elif uploaded_image.size > MAX_AI_IMAGE_SIZE:
-
                 image_error = (
-                    "الصورة كبيرة جدًا. "
-                    "الحد الأقصى 10 ميجابايت."
+                    "الصورة كبيرة جدًا. الحد الأقصى 10 ميجابايت."
                 )
 
             else:
-
                 try:
-
-                    image_bytes = (
-                        uploaded_image.read()
-                    )
+                    image_bytes = uploaded_image.read()
 
                     encoded_image = (
                         base64.b64encode(
                             image_bytes
-                        ).decode(
-                            "utf-8"
-                        )
+                        ).decode("utf-8")
                     )
 
                     image_data_url = (
@@ -3284,7 +3789,6 @@ def ai_chat(request):
                     uploaded_image.seek(0)
 
                 except Exception as exc:
-
                     print(
                         "AI Image Read Error:",
                         exc,
@@ -3298,20 +3802,17 @@ def ai_chat(request):
             not message_text
             and not uploaded_image
         ):
-
             image_error = (
                 "اكتبي سؤالك أو أرفقي صورة أولًا."
             )
 
         if image_error:
-
             messages.error(
                 request,
                 image_error,
             )
 
             if context_type == "subject":
-
                 return redirect(
                     f"{request.path}"
                     f"?subject={quote(subject_name)}"
@@ -3325,15 +3826,11 @@ def ai_chat(request):
         saved_message = message_text
 
         if uploaded_image:
-
             if saved_message:
-
                 saved_message += (
                     "\n\n📷 [تم إرفاق صورة]"
                 )
-
             else:
-
                 saved_message = (
                     "📷 [تم إرفاق صورة]"
                 )
@@ -3352,105 +3849,58 @@ def ai_chat(request):
         )
 
         if context_type == "subject":
-
             system_instructions = f"""
 أنت مساعد تعليمي داخل منصة تعليمية عربية.
 
-السياق الحالي الوحيد لهذه المحادثة هو:
+السياق الحالي لهذه المحادثة هو المادة:
+{subject_name}
 
-المادة: {subject_name}
+استخدم سياق هذه المحادثة فقط.
 
-قواعد صارمة جدًا:
+لا تخلط بين هذه المحادثة وأي محادثة أخرى.
 
-1. استخدم سياق مادة {subject_name} فقط.
+إذا كان السؤال خارج المادة الحالية، أخبر الطالب أن المحادثة مخصصة لهذه المادة.
 
-2. لا تستخدم أي معلومات من مادة أخرى.
+إذا أرسل الطالب صورة، تعامل معها كجزء من السؤال الحالي.
 
-3. لا تستخدم أي معلومات من مهارة Scratch.
+إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
 
-4. لا تستخدم أي معلومات من أي مهارة أخرى.
+تحدث باللغة العربية.
 
-5. لا تخلط بين هذه المحادثة وأي محادثة أخرى للطالب.
+استخدم أسلوبًا بسيطًا وتعليميًا.
 
-6. الرسائل والصور الموجودة في هذه المحادثة تخص مادة {subject_name} فقط.
+اشرح خطوة بخطوة.
 
-7. إذا كان السؤال خارج مادة {subject_name}،
-   أخبر الطالب أن هذه المحادثة مخصصة لهذه المادة.
+لا تخترع معلومات.
 
-8. إذا أرسل الطالب صورة، اعتبرها جزءًا من السؤال الحالي.
-
-9. إذا كانت الصورة تحتوي على سؤال أو تمرين أو نص أو رسم متعلق بالمادة، اشرحها.
-
-10. إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
-
-11. تحدث باللغة العربية.
-
-12. استخدم أسلوبًا بسيطًا وتعليميًا.
-
-13. اشرح خطوة بخطوة.
-
-14. اجعل الشرح مناسبًا لمستوى الطالب.
-
-15. لا تخترع معلومات.
-
-16. إذا كان السؤال متعلقًا بواجب أو امتحان،
-    ساعد الطالب على الفهم والتفكير بدل تقديم إجابة جاهزة بغرض الغش.
-
-17. لا تستنتج أن الطالب يقصد موضوعًا من محادثة أخرى.
-
-18. لا تستعمل أي سياق خارج الرسائل والصور الموجودة في هذه المحادثة الحالية.
+إذا كان السؤال متعلقًا بواجب أو امتحان، ساعد الطالب على الفهم والتفكير.
 """
-
         else:
-
             system_instructions = f"""
 أنت مساعد تعليمي داخل منصة تعليمية عربية.
 
-السياق الحالي الوحيد لهذه المحادثة هو:
+السياق الحالي لهذه المحادثة هو المهارة:
+{skill_obj.name}
 
-المهارة: {skill_obj.name}
+استخدم سياق هذه المحادثة فقط.
 
-قواعد صارمة جدًا:
+لا تخلط بين هذه المحادثة وأي محادثة أخرى.
 
-1. استخدم سياق مهارة {skill_obj.name} فقط.
+إذا كان السؤال خارج المهارة الحالية، أخبر الطالب أن المحادثة مخصصة لهذه المهارة.
 
-2. لا تستخدم أي معلومات من مادة العربي.
+إذا أرسل الطالب صورة، تعامل معها كجزء من السؤال الحالي.
 
-3. لا تستخدم أي معلومات من الرياضيات.
+إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
 
-4. لا تستخدم أي معلومات من أي مادة دراسية.
+تحدث باللغة العربية.
 
-5. لا تستخدم أي معلومات من مهارة أخرى.
+استخدم أسلوبًا بسيطًا وتعليميًا.
 
-6. لا تخلط بين هذه المحادثة وأي محادثة أخرى للطالب.
+اشرح خطوة بخطوة.
 
-7. الرسائل والصور الموجودة في هذه المحادثة تخص مهارة {skill_obj.name} فقط.
+لا تخترع معلومات.
 
-8. إذا كان السؤال خارج مهارة {skill_obj.name}،
-   أخبر الطالب أن هذه المحادثة مخصصة لهذه المهارة.
-
-9. إذا أرسل الطالب صورة، اعتبرها جزءًا من السؤال الحالي.
-
-10. إذا كانت الصورة تحتوي على تمرين أو مشروع أو كود متعلق بالمهارة، اشرحه.
-
-11. إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
-
-12. تحدث باللغة العربية.
-
-13. استخدم أسلوبًا بسيطًا وتعليميًا.
-
-14. اشرح خطوة بخطوة.
-
-15. اجعل الشرح مناسبًا لمستوى الطالب.
-
-16. لا تخترع معلومات.
-
-17. إذا كان السؤال متعلقًا بواجب أو امتحان،
-    ساعد الطالب على الفهم والتفكير بدل تقديم إجابة جاهزة بغرض الغش.
-
-18. لا تستنتج أن الطالب يقصد موضوعًا من محادثة أخرى.
-
-19. لا تستعمل أي سياق خارج الرسائل والصور الموجودة في هذه المحادثة الحالية.
+إذا كان السؤال متعلقًا بواجب أو امتحان، ساعد الطالب على الفهم والتفكير.
 """
 
         previous_messages = (
@@ -3461,21 +3911,16 @@ def ai_chat(request):
             .exclude(
                 pk=student_message.pk
             )
-            .order_by(
-                "created_at"
-            )
+            .order_by("created_at")
         )
 
         api_messages = []
 
         for old_message in previous_messages:
-
             if old_message.sender_type == "student":
-
                 old_content = []
 
                 if old_message.message:
-
                     old_content.append(
                         {
                             "type": "input_text",
@@ -3484,13 +3929,10 @@ def ai_chat(request):
                     )
 
                 if old_message.image:
-
                     try:
-
                         with old_message.image.open(
                             "rb"
                         ) as image_file:
-
                             old_image_bytes = (
                                 image_file.read()
                             )
@@ -3498,9 +3940,7 @@ def ai_chat(request):
                         old_encoded_image = (
                             base64.b64encode(
                                 old_image_bytes
-                            ).decode(
-                                "utf-8"
-                            )
+                            ).decode("utf-8")
                         )
 
                         old_image_name = (
@@ -3510,17 +3950,14 @@ def ai_chat(request):
                         if old_image_name.endswith(
                             ".png"
                         ):
-
                             old_mime = "image/png"
 
                         elif old_image_name.endswith(
                             ".webp"
                         ):
-
                             old_mime = "image/webp"
 
                         else:
-
                             old_mime = "image/jpeg"
 
                         old_image_data_url = (
@@ -3531,21 +3968,17 @@ def ai_chat(request):
                         old_content.append(
                             {
                                 "type": "input_image",
-                                "image_url": (
-                                    old_image_data_url
-                                ),
+                                "image_url": old_image_data_url,
                             }
                         )
 
                     except Exception as exc:
-
                         print(
                             "Old AI Image Read Error:",
                             exc,
                         )
 
                 if old_content:
-
                     api_messages.append(
                         {
                             "role": "user",
@@ -3554,9 +3987,7 @@ def ai_chat(request):
                     )
 
             elif old_message.sender_type == "ai":
-
                 if old_message.message:
-
                     api_messages.append(
                         {
                             "role": "assistant",
@@ -3567,7 +3998,6 @@ def ai_chat(request):
         current_content = []
 
         if message_text:
-
             current_content.append(
                 {
                     "type": "input_text",
@@ -3576,7 +4006,6 @@ def ai_chat(request):
             )
 
         if image_data_url:
-
             current_content.append(
                 {
                     "type": "input_image",
@@ -3592,9 +4021,7 @@ def ai_chat(request):
         )
 
         try:
-
             if not settings.OPENAI_API_KEY:
-
                 raise ValueError(
                     "OPENAI_API_KEY غير موجود."
                 )
@@ -3619,22 +4046,19 @@ def ai_chat(request):
             ).strip()
 
             if not ai_reply:
-
                 ai_reply = (
-                    "لم أستطع تكوين إجابة الآن. "
-                    "حاولي مرة أخرى."
+                    "لم أستطع تكوين إجابة الآن. حاولي مرة أخرى."
                 )
 
         except Exception as exc:
-
             print(
                 "OpenAI AI Chat Error:",
                 exc,
             )
 
             ai_reply = (
-                "حصلت مشكلة مؤقتة أثناء الاتصال "
-                "بالمساعد الذكي. حاولي مرة أخرى بعد قليل."
+                "حصلت مشكلة مؤقتة أثناء الاتصال بالمساعد الذكي. "
+                "حاولي مرة أخرى بعد قليل."
             )
 
         AIMessage.objects.create(
@@ -3652,7 +4076,6 @@ def ai_chat(request):
         )
 
         if context_type == "subject":
-
             return redirect(
                 f"{request.path}"
                 f"?subject={quote(subject_name)}"
@@ -3666,9 +4089,7 @@ def ai_chat(request):
     messages_list = (
         conversation.messages
         .all()
-        .order_by(
-            "created_at"
-        )
+        .order_by("created_at")
     )
 
     django_messages = list(
@@ -3690,27 +4111,64 @@ def ai_chat(request):
     )
 
 
-# ====================================================
+# =========================================================
 # Prices
-# ====================================================
+# =========================================================
 
 def prices(request):
-
     ensure_grade_settings()
 
     settings_obj = get_platform_settings()
 
     grades = (
-        GradeSetting.objects.filter(
-            is_active=True
-        )
+        GradeSetting.objects
+        .filter(is_active=True)
         .order_by("id")
     )
 
-    skills = (
-        Skill.objects.filter(
-            is_active=True
+    available_subjects = (
+        AvailableSubject.objects
+        .filter(
+            is_active=True,
+            grade__is_active=True,
         )
+        .select_related("grade")
+        .order_by(
+            "grade__id",
+            "school_type",
+            "subject_name",
+        )
+    )
+
+    grade_data = []
+
+    for grade in grades:
+        grade_subjects = (
+            available_subjects
+            .filter(grade=grade)
+        )
+
+        arabic_subjects = (
+            grade_subjects
+            .filter(school_type="عربي")
+        )
+
+        language_subjects = (
+            grade_subjects
+            .filter(school_type="لغات")
+        )
+
+        grade_data.append(
+            {
+                "grade": grade,
+                "arabic_subjects": arabic_subjects,
+                "language_subjects": language_subjects,
+            }
+        )
+
+    skills = (
+        Skill.objects
+        .filter(is_active=True)
         .order_by("name")
     )
 
@@ -3718,7 +4176,7 @@ def prices(request):
         request,
         "main/prices.html",
         {
-            "grades": grades,
+            "grade_data": grade_data,
             "skills": skills,
             "settings": settings_obj,
         },

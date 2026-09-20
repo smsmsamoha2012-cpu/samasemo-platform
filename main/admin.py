@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.auth.models import User
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
@@ -81,8 +83,6 @@ class GradeSettingAdmin(admin.ModelAdmin):
     list_display = (
         "grade",
         "is_active",
-        "monthly_subject_price",
-        "full_term_price",
         "updated_at",
     )
 
@@ -110,8 +110,11 @@ class AvailableSubjectAdmin(admin.ModelAdmin):
         "subject_name",
         "grade",
         "school_type",
+        "monthly_price",
+        "full_term_price",
         "is_active",
         "created_at",
+        "updated_at",
     )
 
     list_filter = (
@@ -127,7 +130,49 @@ class AvailableSubjectAdmin(admin.ModelAdmin):
 
     ordering = (
         "grade",
+        "school_type",
         "subject_name",
+    )
+
+    fieldsets = (
+        (
+            "بيانات المادة",
+            {
+                "fields": (
+                    "grade",
+                    "school_type",
+                    "subject_name",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "أسعار المادة",
+            {
+                "fields": (
+                    "monthly_price",
+                    "full_term_price",
+                ),
+                "description": (
+                    "حددي سعر كل مادة بشكل مستقل "
+                    "عن باقي المواد."
+                ),
+            },
+        ),
+        (
+            "التواريخ",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
     )
 
 
@@ -230,6 +275,7 @@ class SkillHomeworkAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "skill",
+        "lesson",
         "homework_type",
         "total_marks",
         "is_active",
@@ -238,6 +284,7 @@ class SkillHomeworkAdmin(admin.ModelAdmin):
 
     list_filter = (
         "skill",
+        "lesson",
         "homework_type",
         "is_active",
     )
@@ -246,6 +293,7 @@ class SkillHomeworkAdmin(admin.ModelAdmin):
         "title",
         "description",
         "skill__name",
+        "lesson__title",
     )
 
     ordering = (
@@ -262,6 +310,7 @@ class SkillHomeworkAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "skill",
+                    "lesson",
                     "title",
                     "homework_type",
                     "description",
@@ -569,6 +618,41 @@ class StudentAdmin(admin.ModelAdmin):
     ordering = (
         "-created_at",
     )
+
+    # =====================================================
+    # حذف الطالب مع حساب User المرتبط به
+    # =====================================================
+
+    def delete_model(self, request, obj):
+
+        user = obj.user
+
+        with transaction.atomic():
+
+            obj.delete()
+
+            if user:
+
+                user.delete()
+
+    def delete_queryset(self, request, queryset):
+
+        user_ids = list(
+            queryset
+            .exclude(user__isnull=True)
+            .values_list(
+                "user_id",
+                flat=True,
+            )
+        )
+
+        with transaction.atomic():
+
+            queryset.delete()
+
+            User.objects.filter(
+                pk__in=user_ids
+            ).delete()
 
     @admin.display(description="تغيير الباسورد")
     def change_password_button(self, obj):

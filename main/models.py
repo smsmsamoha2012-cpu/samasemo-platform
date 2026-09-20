@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -113,8 +114,72 @@ class Student(models.Model):
         verbose_name="آخر تحديث",
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student_phone"],
+                condition=Q(student_phone__gt=""),
+                name="unique_nonempty_student_phone",
+            ),
+        ]
+
     def __str__(self):
         return f"{self.student_name} ({self.grade})"
+
+
+# ====================================================
+# Parent
+# ====================================================
+
+class Parent(models.Model):
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="parent_profile",
+        verbose_name="حساب المستخدم",
+    )
+
+    parent_name = models.CharField(
+        max_length=100,
+        default="ولي الأمر",
+        verbose_name="اسم ولي الأمر",
+    )
+
+    parent_phone = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name="رقم ولي الأمر",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="حساب ولي الأمر مفعل",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ الإنشاء",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="آخر تحديث",
+    )
+
+    class Meta:
+        ordering = ["parent_name"]
+        verbose_name = "ولي أمر"
+        verbose_name_plural = "أولياء الأمور"
+
+    def __str__(self):
+        return f"{self.parent_name} - {self.parent_phone}"
+
+    @property
+    def children(self):
+        return Student.objects.filter(
+            parent_phone=self.parent_phone
+        ).order_by("student_name")
 
 
 # ====================================================
@@ -145,16 +210,6 @@ class GradeSetting(models.Model):
     is_active = models.BooleanField(
         default=True,
         verbose_name="الصف متاح",
-    )
-
-    monthly_subject_price = models.PositiveIntegerField(
-        default=0,
-        verbose_name="سعر المادة شهريًا",
-    )
-
-    full_term_price = models.PositiveIntegerField(
-        default=0,
-        verbose_name="سعر الترم الكامل",
     )
 
     created_at = models.DateTimeField(
@@ -206,6 +261,16 @@ class AvailableSubject(models.Model):
         verbose_name="اسم المادة",
     )
 
+    monthly_price = models.PositiveIntegerField(
+        default=0,
+        verbose_name="السعر الشهري",
+    )
+
+    full_term_price = models.PositiveIntegerField(
+        default=0,
+        verbose_name="سعر الترم الكامل",
+    )
+
     is_active = models.BooleanField(
         default=True,
         verbose_name="المادة متاحة",
@@ -214,6 +279,11 @@ class AvailableSubject(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="تاريخ الإنشاء",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="آخر تحديث",
     )
 
     class Meta:
@@ -234,6 +304,7 @@ class AvailableSubject(models.Model):
         verbose_name_plural = "المواد المتاحة"
 
     def __str__(self):
+
         status = "متاحة" if self.is_active else "غير متاحة"
 
         return (
@@ -295,6 +366,7 @@ class Skill(models.Model):
         verbose_name_plural = "المهارات"
 
     def __str__(self):
+
         status = "متاحة" if self.is_active else "غير متاحة"
 
         return (
@@ -346,7 +418,7 @@ class SkillLesson(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name="تاريخ الإنشاء",
+        verbose_name="تاريخ الإضافة",
     )
 
     updated_at = models.DateTimeField(
@@ -361,6 +433,77 @@ class SkillLesson(models.Model):
 
     def __str__(self):
         return f"{self.skill.name} - {self.title}"
+
+
+# ====================================================
+# Skill Lesson Watch
+# ====================================================
+
+class SkillLessonWatchStat(models.Model):
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="skill_watch_stats",
+        verbose_name="الطالب",
+    )
+
+    lesson = models.ForeignKey(
+        SkillLesson,
+        on_delete=models.CASCADE,
+        related_name="watch_stats",
+        verbose_name="الحصة",
+    )
+
+    view_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="عدد المشاهدات",
+    )
+
+    watch_seconds = models.PositiveIntegerField(
+        default=0,
+        verbose_name="وقت المشاهدة بالثواني",
+    )
+
+    last_position = models.FloatField(
+        default=0.0,
+        verbose_name="آخر مكان",
+    )
+
+    is_completed = models.BooleanField(
+        default=False,
+        verbose_name="تمت مشاهدة الحصة",
+    )
+
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="تاريخ الإنشاء",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="آخر تحديث",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "lesson",
+                ],
+                name="unique_student_skill_lesson_watch",
+            )
+        ]
+
+        verbose_name = "مشاهدة حصة مهارة"
+        verbose_name_plural = "مشاهدات حصص المهارات"
+
+    def __str__(self):
+        return (
+            f"{self.student.student_name} - "
+            f"{self.lesson.title}"
+        )
 
 
 # ====================================================
@@ -379,6 +522,15 @@ class SkillHomework(models.Model):
         on_delete=models.CASCADE,
         related_name="homeworks",
         verbose_name="المهارة",
+    )
+
+    lesson = models.ForeignKey(
+        SkillLesson,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="homeworks",
+        verbose_name="الحصة المرتبطة",
     )
 
     title = models.CharField(
@@ -516,6 +668,7 @@ class SkillHomeworkSubmission(models.Model):
 
     STATUS_CHOICES = [
         ("submitted", "تم التسليم"),
+        ("pending", "قيد التصحيح"),
         ("graded", "تم التصحيح"),
     ]
 
@@ -537,7 +690,7 @@ class SkillHomeworkSubmission(models.Model):
         upload_to="skill_homework_submissions/",
         blank=True,
         null=True,
-        verbose_name="ملف إجابة الطالب",
+        verbose_name="ملف إجابة الطالب - صورة أو فيديو",
     )
 
     status = models.CharField(
@@ -561,7 +714,10 @@ class SkillHomeworkSubmission(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "homework"],
+                fields=[
+                    "student",
+                    "homework",
+                ],
                 name="unique_student_skill_homework_submission",
             )
         ]
@@ -615,7 +771,10 @@ class SkillHomeworkAnswer(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["submission", "question"],
+                fields=[
+                    "submission",
+                    "question",
+                ],
                 name="unique_skill_submission_question_answer",
             )
         ]
@@ -678,7 +837,10 @@ class SkillHomeworkResult(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "homework"],
+                fields=[
+                    "student",
+                    "homework",
+                ],
                 name="unique_student_skill_homework_result",
             )
         ]
@@ -736,7 +898,10 @@ class SkillSubscription(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "skill"],
+                fields=[
+                    "student",
+                    "skill",
+                ],
                 name="unique_student_skill_subscription",
             )
         ]
@@ -822,6 +987,7 @@ class PlatformSettings(models.Model):
         return settings_obj
 
     def is_vacation_now(self):
+
         current_month = timezone.localtime().month
 
         start = self.vacation_start_month
@@ -1071,6 +1237,7 @@ class SubjectSubscription(models.Model):
 
     @property
     def lessons_remaining(self):
+
         if self.max_lessons == 0:
             return None
 
@@ -1081,6 +1248,7 @@ class SubjectSubscription(models.Model):
 
     @property
     def remaining_label(self):
+
         if (
             self.plan_type == "full_term"
             or self.max_lessons == 0
@@ -1312,6 +1480,11 @@ class LessonWatchStat(models.Model):
         verbose_name="آخر مكان",
     )
 
+    is_completed = models.BooleanField(
+        default=False,
+        verbose_name="تمت مشاهدة الحصة",
+    )
+
     created_at = models.DateTimeField(
         default=timezone.now,
         verbose_name="تاريخ الإنشاء",
@@ -1393,6 +1566,15 @@ class Homework(models.Model):
         verbose_name="المادة",
     )
 
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="homeworks",
+        verbose_name="الحصة المرتبطة",
+    )
+
     file = models.FileField(
         upload_to="homework/",
         blank=True,
@@ -1407,7 +1589,7 @@ class Homework(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name="تاريخ الإنشاء",
+        verbose_name="تاريخ الإضافة",
     )
 
     is_active = models.BooleanField(
@@ -1493,7 +1675,7 @@ class HomeworkQuestion(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name="تاريخ الإنشاء",
+        verbose_name="تاريخ الإضافة",
     )
 
     class Meta:
@@ -1539,7 +1721,7 @@ class HomeworkSubmission(models.Model):
         upload_to="homework_submissions/",
         blank=True,
         null=True,
-        verbose_name="إجابة الطالب",
+        verbose_name="إجابة الطالب - صورة أو فيديو",
     )
 
     status = models.CharField(
@@ -1756,7 +1938,7 @@ class Exam(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name="تاريخ الإنشاء",
+        verbose_name="تاريخ الإضافة",
     )
 
     is_active = models.BooleanField(
@@ -1914,6 +2096,7 @@ class AIConversation(models.Model):
         verbose_name_plural = "محادثات AI"
 
     def __str__(self):
+
         context_name = self.subject
 
         if self.skill:
@@ -2137,4 +2320,3 @@ def activate_subscription_on_approval(
         ).update(
             processed_at=timezone.now(),
         )
-
