@@ -2,17 +2,21 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.http import HttpResponse
 from django.urls import include, path
 
 from main.teacher_views import (
     teacher_dashboard,
     teacher_login,
     teacher_logout,
+    teacher_questions,
+    teacher_question_detail,
 )
 
 from main.views import (
     add_content,
     ai_chat,
+    ask_teacher,
     curriculum_page,
     electronic_homework,
     home,
@@ -23,6 +27,8 @@ from main.views import (
     parent_curriculum,
     parent_skills,
     parent_student,
+    password_reset_request,
+    platform_ai,
     prices,
     protected_lesson_video,
     skill_detail,
@@ -56,6 +62,21 @@ urlpatterns = [
         "",
         home,
         name="home",
+    ),
+
+
+    # =================================================
+    # robots.txt - السماح لمحركات البحث
+    # =================================================
+
+    path(
+        "robots.txt",
+        lambda request: HttpResponse(
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Sitemap: https://sama-platform.onrender.com/sitemap.xml\n",
+            content_type="text/plain",
+        ),
     ),
 
 
@@ -137,6 +158,17 @@ urlpatterns = [
 
 
     # =================================================
+    # اسأل مدرس - سؤال خاص بالدرس
+    # =================================================
+
+    path(
+        "student/lesson/<int:lesson_id>/ask-teacher/",
+        ask_teacher,
+        name="ask_teacher",
+    ),
+
+
+    # =================================================
     # الواجب الإلكتروني للمواد
     # =================================================
 
@@ -203,6 +235,17 @@ urlpatterns = [
 
 
     # =================================================
+    # طلب استعادة كلمة المرور
+    # =================================================
+
+    path(
+        "student/password-reset-request/",
+        password_reset_request,
+        name="password_reset_request",
+    ),
+
+
+    # =================================================
     # اشتراك الطالب القديم
     # =================================================
 
@@ -236,7 +279,18 @@ urlpatterns = [
 
 
     # =================================================
-    # الذكاء الاصطناعي
+    # مساعد المنصة العام
+    # =================================================
+
+    path(
+        "platform-ai/",
+        platform_ai,
+        name="platform_ai",
+    ),
+
+
+    # =================================================
+    # الذكاء الاصطناعي الخاص بالطالب
     # =================================================
 
     path(
@@ -304,6 +358,18 @@ urlpatterns = [
         "teacher/dashboard/",
         teacher_dashboard,
         name="teacher_dashboard",
+    ),
+
+    path(
+        "teacher/questions/",
+        teacher_questions,
+        name="teacher_questions",
+    ),
+
+    path(
+        "teacher/questions/<int:question_id>/",
+        teacher_question_detail,
+        name="teacher_question_detail",
     ),
 
     path(

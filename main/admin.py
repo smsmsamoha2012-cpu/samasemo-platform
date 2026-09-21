@@ -654,6 +654,10 @@ class StudentAdmin(admin.ModelAdmin):
                 pk__in=user_ids
             ).delete()
 
+    # =====================================================
+    # زر تغيير باسورد الطالب
+    # =====================================================
+
     @admin.display(description="تغيير الباسورد")
     def change_password_button(self, obj):
 
@@ -855,6 +859,13 @@ class SubscriptionRequestAdmin(admin.ModelAdmin):
         form,
         change,
     ):
+        """
+        عند رفض طلب إضافة:
+        - يجب كتابة سبب الرفض.
+        - يتم حذف المواد الموجودة في الطلب.
+        - يتم حذف المهارات الموجودة في الطلب.
+        - يتم حفظ سبب الرفض.
+        """
 
         if obj.status == "rejected":
 
@@ -870,6 +881,50 @@ class SubscriptionRequestAdmin(admin.ModelAdmin):
                 )
 
                 return
+
+            # =================================================
+            # طلب إضافة
+            # =================================================
+
+            if obj.request_type == "addition":
+
+                student = obj.student
+
+                # =============================================
+                # المواد
+                # =============================================
+
+                selected_subjects = (
+                    obj.selected_subjects
+                    or []
+                )
+
+                if selected_subjects:
+
+                    SubjectSubscription.objects.filter(
+                        student=student,
+                        subject__in=selected_subjects,
+                    ).delete()
+
+                # =============================================
+                # المهارات
+                # =============================================
+
+                selected_skills = (
+                    obj.selected_skills
+                    or []
+                )
+
+                if selected_skills:
+
+                    SkillSubscription.objects.filter(
+                        student=student,
+                        skill__name__in=selected_skills,
+                    ).delete()
+
+        # =====================================================
+        # حفظ الطلب
+        # =====================================================
 
         super().save_model(
             request,
