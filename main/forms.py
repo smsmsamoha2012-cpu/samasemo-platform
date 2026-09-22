@@ -45,6 +45,7 @@ class StudentForm(forms.ModelForm):
             "grade",
             "school_type",
             "student_phone",
+            "email",
             "parent_phone",
         ]
 
@@ -53,6 +54,7 @@ class StudentForm(forms.ModelForm):
             "grade": "الصف الدراسي",
             "school_type": "نوع التعليم",
             "student_phone": "رقم تليفون الطالب",
+            "email": "البريد الإلكتروني",
             "parent_phone": "رقم تليفون ولي الأمر",
         }
 
@@ -71,6 +73,15 @@ class StudentForm(forms.ModelForm):
                     "placeholder": (
                         "اكتب رقم تليفون الطالب"
                     ),
+                }
+            ),
+
+            "email": forms.EmailInput(
+                attrs={
+                    "placeholder": (
+                        "اكتب البريد الإلكتروني"
+                    ),
+                    "autocomplete": "email",
                 }
             ),
 
@@ -129,6 +140,29 @@ class StudentForm(forms.ModelForm):
             )
 
         return name
+
+    # =================================================
+    # البريد الإلكتروني
+    # =================================================
+
+    def clean_email(self):
+
+        email = (
+            self.cleaned_data.get(
+                "email",
+                "",
+            )
+            .strip()
+            .lower()
+        )
+
+        if not email:
+
+            raise forms.ValidationError(
+                "من فضلك اكتب البريد الإلكتروني."
+            )
+
+        return email
 
     # =================================================
     # رقم الطالب

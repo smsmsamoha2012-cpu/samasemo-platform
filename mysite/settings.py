@@ -23,6 +23,7 @@ load_dotenv(BASE_DIR / ".env")
 # =========================
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+
 DEBUG = True
 
 ALLOWED_HOSTS = [
@@ -35,7 +36,10 @@ ALLOWED_HOSTS = [
 ]
 
 if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
-    ALLOWED_HOSTS.append(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+    ALLOWED_HOSTS.append(
+        os.getenv("RENDER_EXTERNAL_HOSTNAME")
+    )
+
 
 # =========================
 # INSTALLED APPS
@@ -129,13 +133,37 @@ WSGI_APPLICATION = "mysite.wsgi.application"
 # =========================
 # DATABASE
 # =========================
+#
+# لو DATABASE_URL موجودة على Render:
+# يستخدم قاعدة البيانات الدائمة.
+#
+# لو مش موجودة:
+# يستخدم SQLite المحلي الموجود عندك.
+#
+# مهم:
+# هذا الجزء لا يحذف db.sqlite3
+# ولا يحذف أي طالب.
+# =========================
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+        )
+    }
+
+else:
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # =========================
@@ -252,3 +280,52 @@ SOCIALACCOUNT_PROVIDERS = {
 # =========================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+# =========================
+# EMAIL
+# =========================
+#
+# يستخدم لإرسال كود استعادة كلمة المرور
+# إلى الإيميل المسجل للطالب.
+#
+# بيانات الدخول نفسها موجودة في .env
+# ولا نضعها داخل الكود.
+# =========================
+
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+)
+
+EMAIL_HOST = os.getenv(
+    "EMAIL_HOST",
+    "smtp.gmail.com"
+)
+
+EMAIL_PORT = int(
+    os.getenv(
+        "EMAIL_PORT",
+        "587"
+    )
+)
+
+EMAIL_USE_TLS = (
+    os.getenv(
+        "EMAIL_USE_TLS",
+        "True"
+    ).lower()
+    == "true"
+)
+
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER"
+)
+
+EMAIL_HOST_PASSWORD = os.getenv(
+    "EMAIL_HOST_PASSWORD"
+)
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER
+)

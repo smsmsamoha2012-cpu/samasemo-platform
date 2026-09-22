@@ -129,15 +129,11 @@
             border-radius: 18px;
             padding: 16px 20px;
             margin-bottom: 20px;
-
             box-shadow: 0 6px 20px rgba(0,0,0,.05);
-
             border: 1px solid #e5e9f1;
-
             display: flex;
             align-items: center;
             justify-content: space-between;
-
             gap: 15px;
         }
 
@@ -159,21 +155,14 @@
 
         .ai-main-button {
             display: inline-block;
-
             background: #673ab7;
             color: white;
-
             text-decoration: none;
-
             padding: 11px 18px;
-
             border-radius: 11px;
-
             font-size: 14px;
             font-weight: bold;
-
             white-space: nowrap;
-
             transition: .2s;
         }
 
@@ -228,6 +217,27 @@
             border-radius: 15px;
             margin-top: 15px;
             background: black;
+        }
+
+        /* ============================= */
+        /* اسأل مدرس */
+        /* ============================= */
+
+        .ask-teacher-button {
+            display: inline-block;
+            margin-top: 15px;
+            background: #ff8a65;
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 11px;
+            font-weight: bold;
+            transition: .2s;
+        }
+
+        .ask-teacher-button:hover {
+            opacity: .9;
+            transform: translateY(-1px);
         }
 
         /* ============================= */
@@ -416,6 +426,11 @@
 
             .menu {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .ask-teacher-button {
+                width: 100%;
+                text-align: center;
             }
 
         }
@@ -713,6 +728,18 @@
                                 </div>
 
                             {% endif %}
+
+
+                            <!-- ================================= -->
+                            <!-- اسأل مدرس -->
+                            <!-- ================================= -->
+
+                            <a
+                                class="ask-teacher-button"
+                                href="{% url 'ask_teacher' lesson.id %}"
+                            >
+                                👩‍🏫 اسأل مدرس عن الحصة
+                            </a>
 
                         </div>
 

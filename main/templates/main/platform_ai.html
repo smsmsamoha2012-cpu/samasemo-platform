@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>مساعد المنصة</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Tahoma, sans-serif;
+            background: #f5f7fb;
+            color: #243f6b;
+            min-height: 100vh;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =========================
+           Header
+        ========================= */
+
+        .header {
+            height: 70px;
+            background: #ffffff;
+            border-bottom: 1px solid #e8ecf3;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #294a7c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .back-button {
+            text-decoration: none;
+            color: #294a7c;
+            background: #f0f3f8;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        /* =========================
+           Chat
+        ========================= */
+
+        .chat-wrapper {
+            width: min(900px, 94%);
+            margin: 25px auto;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 10px 35px rgba(36, 63, 107, 0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 120px);
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 35px 20px 20px;
+        }
+
+        .ai-avatar {
+            width: 75px;
+            height: 75px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            background: #294a7c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 38px;
+            box-shadow: 0 8px 20px rgba(41, 74, 124, 0.18);
+        }
+
+        .welcome h1 {
+            margin: 0 0 10px;
+            font-size: 27px;
+        }
+
+        .welcome p {
+            margin: 0 auto;
+            max-width: 600px;
+            color: #68758a;
+            line-height: 1.8;
+        }
+
+        .chat-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 18px;
+        }
+
+        .message.user {
+            justify-content: flex-start;
+        }
+
+        .message.ai {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 14px 17px;
+            border-radius: 18px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .user .bubble {
+            background: #294a7c;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai .bubble {
+            background: #f1f4f8;
+            color: #243f6b;
+            border-bottom-left-radius: 5px;
+        }
+
+        /* =========================
+           Quick Questions
+        ========================= */
+
+        .quick-title {
+            text-align: center;
+            margin: 5px 0 12px;
+            color: #7a8798;
+            font-size: 14px;
+        }
+
+        .quick-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 9px;
+            padding: 0 15px 20px;
+        }
+
+        .quick-button {
+            border: 1px solid #dfe5ee;
+            background: #ffffff;
+            color: #294a7c;
+            border-radius: 20px;
+            padding: 9px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .quick-button:hover {
+            background: #f2f5f9;
+        }
+
+        /* =========================
+           Input
+        ========================= */
+
+        .input-area {
+            border-top: 1px solid #e8ecf3;
+            padding: 15px;
+            background: #ffffff;
+        }
+
+        .input-form {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .input-box {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 50px;
+            max-height: 130px;
+            resize: vertical;
+            border: 1px solid #dce2eb;
+            border-radius: 17px;
+            padding: 14px 15px;
+            outline: none;
+            font-family: inherit;
+            font-size: 15px;
+            color: #243f6b;
+        }
+
+        textarea:focus {
+            border-color: #294a7c;
+        }
+
+        .send-button {
+            width: 52px;
+            height: 52px;
+            border: none;
+            border-radius: 50%;
+            background: #294a7c;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .send-button:hover {
+            opacity: 0.9;
+        }
+
+        .note {
+            text-align: center;
+            margin-top: 8px;
+            color: #9aa4b2;
+            font-size: 11px;
+        }
+
+        /* =========================
+           Messages
+        ========================= */
+
+        .django-messages {
+            padding: 0 20px;
+        }
+
+        .django-message {
+            background: #fff4e5;
+            color: #8a5a00;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* =========================
+           Mobile
+        ========================= */
+
+        @media (max-width: 650px) {
+
+            .header {
+                height: 62px;
+                padding: 0 13px;
+            }
+
+            .brand {
+                font-size: 16px;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+
+            .back-button {
+                padding: 8px 11px;
+                font-size: 12px;
+            }
+
+            .chat-wrapper {
+                width: 100%;
+                margin: 0;
+                border-radius: 0;
+                min-height: calc(100vh - 62px);
+            }
+
+            .welcome {
+                padding: 25px 15px 15px;
+            }
+
+            .ai-avatar {
+                width: 62px;
+                height: 62px;
+                font-size: 30px;
+            }
+
+            .welcome h1 {
+                font-size: 22px;
+            }
+
+            .welcome p {
+                font-size: 13px;
+            }
+
+            .chat-content {
+                padding: 15px;
+            }
+
+            .bubble {
+                max-width: 88%;
+                font-size: 14px;
+            }
+
+            .quick-buttons {
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 15px;
+            }
+
+            .quick-button {
+                white-space: nowrap;
+            }
+
+            .input-area {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="page">
+
+    <!-- =========================
+         Header
+    ========================= -->
+
+    <header class="header">
+
+        <div class="brand">
+            <div class="brand-icon">🤖</div>
+            <span>مساعد المنصة</span>
+        </div>
+
+        <a href="{% url 'home' %}" class="back-button">
+            الرئيسية
+        </a>
+
+    </header>
+
+
+    <!-- =========================
+         Chat
+    ========================= -->
+
+    <main class="chat-wrapper">
+
+        <section class="welcome">
+
+            <div class="ai-avatar">
+                🤖
+            </div>
+
+            <h1>
+                أهلًا بيكي 👋
+            </h1>
+
+            <p>
+                أنا مساعد المنصة الذكي 🤖
+                <br>
+                أقدر أساعدك في التسجيل، تسجيل الدخول، الاشتراكات،
+                المواد، المهارات، الحصص، الواجبات، وأي مشكلة في استخدام المنصة.
+            </p>
+
+        </section>
+
+
+        <!-- رسائل Django -->
+
+        {% if messages %}
+
+            <div class="django-messages">
+
+                {% for message in messages %}
+
+                    <div class="django-message">
+                        {{ message }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =========================
+             Chat Content
+        ========================= -->
+
+        <section class="chat-content" id="chatContent">
+
+            {% if question %}
+
+                <div class="message user">
+
+                    <div class="bubble">
+                        {{ question }}
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            {% if answer %}
+
+                <div class="message ai">
+
+                    <div class="bubble">
+                        {{ answer }}
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            {% if not question and not answer %}
+
+                <div class="message ai">
+
+                    <div class="bubble">
+                        👋 أهلًا بيكي!
+                        قوليلي محتاجة مساعدة في إيه في المنصة؟
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+
+        <!-- =========================
+             Quick Questions
+        ========================= -->
+
+        <div class="quick-title">
+            أو اختاري سؤال سريع
+        </div>
+
+        <div class="quick-buttons">
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('مش عارفة أعمل حساب جديد')"
+            >
+                📝 إنشاء حساب
+            </button>
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('مش عارفة أسجل الدخول')"
+            >
+                🔐 تسجيل الدخول
+            </button>
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('نسيت الرقم السري')"
+            >
+                🔑 نسيت كلمة المرور
+            </button>
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('مش عارفة أشترك في مادة')"
+            >
+                📚 الاشتراك
+            </button>
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('المادة المشتركة فيها مش ظاهرة عندي')"
+            >
+                📖 مادة مش ظاهرة
+            </button>
+
+            <button
+                type="button"
+                class="quick-button"
+                onclick="setQuestion('مش عارفة أوصل للحصة')"
+            >
+                🎓 الوصول للحصة
+            </button>
+
+        </div>
+
+
+        <!-- =========================
+             Input
+        ========================= -->
+
+        <div class="input-area">
+
+            <form
+                method="post"
+                class="input-form"
+            >
+
+                {% csrf_token %}
+
+                <div class="input-box">
+
+                    <textarea
+                        name="message"
+                        id="messageInput"
+                        placeholder="اكتبي مشكلتك هنا..."
+                        required
+                    ></textarea>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="send-button"
+                    title="إرسال"
+                >
+                    ➤
+                </button>
+
+            </form>
+
+            <div class="note">
+                مساعد المنصة مخصص لمساعدتك في استخدام المنصة 💙
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+    function setQuestion(text) {
+        const input = document.getElementById("messageInput");
+
+        input.value = text;
+
+        input.focus();
+    }
+
+
+    const chatContent = document.getElementById("chatContent");
+
+    if (chatContent) {
+        chatContent.scrollTop = chatContent.scrollHeight;
+    }
+
+
+    const messageInput = document.getElementById("messageInput");
+
+    if (messageInput) {
+
+        messageInput.addEventListener("keydown", function(event) {
+
+            if (event.key === "Enter" && !event.shiftKey) {
+
+                event.preventDefault();
+
+                this.form.submit();
+
+            }
+
+        });
+
+    }
+
+</script>
+
+</body>
+</html>

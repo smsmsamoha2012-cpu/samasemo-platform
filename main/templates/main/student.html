@@ -109,6 +109,7 @@
             color: #b02a37;
             margin-top: -10px;
             margin-bottom: 15px;
+            line-height: 1.6;
         }
 
         button {
@@ -161,6 +162,14 @@
             padding: 18px;
             text-align: center;
             color: #777;
+        }
+
+        .email-note {
+            color: #666;
+            font-size: 13px;
+            margin-top: -10px;
+            margin-bottom: 18px;
+            line-height: 1.7;
         }
 
     </style>
@@ -359,10 +368,39 @@
                 name="student_phone"
                 value="{{ form.student_phone.value|default:'' }}"
                 placeholder="اكتب رقم الهاتف"
+                autocomplete="tel"
                 required
             >
 
             {% for error in form.student_phone.errors %}
+
+                <div class="field-error">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+
+            <!-- البريد الإلكتروني -->
+
+            <label>
+                البريد الإلكتروني
+            </label>
+
+            <input
+                type="email"
+                name="email"
+                value="{{ form.email.value|default:'' }}"
+                placeholder="اكتب البريد الإلكتروني"
+                autocomplete="email"
+                required
+            >
+
+            <div class="email-note">
+                📧 البريد الإلكتروني مطلوب لأنه سيتم استخدامه عند استعادة كلمة المرور.
+            </div>
+
+            {% for error in form.email.errors %}
 
                 <div class="field-error">
                     {{ error }}
@@ -382,6 +420,7 @@
                 name="parent_phone"
                 value="{{ form.parent_phone.value|default:'' }}"
                 placeholder="اكتب رقم الهاتف"
+                autocomplete="tel"
                 required
             >
 
@@ -404,6 +443,7 @@
                 type="password"
                 name="password"
                 minlength="6"
+                autocomplete="new-password"
                 required
             >
 
@@ -418,6 +458,7 @@
                 type="password"
                 name="confirmPassword"
                 minlength="6"
+                autocomplete="new-password"
                 required
             >
 
@@ -551,6 +592,7 @@
         class="whatsapp"
         href="{{ support_whatsapp }}"
         target="_blank"
+        rel="noopener noreferrer"
     >
 
         💬 التواصل مع المنصة عبر واتساب

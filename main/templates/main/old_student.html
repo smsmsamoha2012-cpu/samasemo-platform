@@ -3,6 +3,7 @@
 <head>
 
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
@@ -78,6 +79,26 @@
             cursor: pointer;
         }
 
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .forgot-password {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #294a7c;
+            font-weight: bold;
+            text-decoration: none;
+            background: #f1f4f9;
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .forgot-password:hover {
+            background: #e8edf5;
+        }
+
         .error {
             background: #ffecec;
             color: #a32626;
@@ -122,6 +143,10 @@
             text-decoration: none;
         }
 
+        .back:hover {
+            text-decoration: underline;
+        }
+
     </style>
 
 </head>
@@ -137,6 +162,7 @@
     <div class="subtitle">
         سجلي الدخول برقم الهاتف وكلمة المرور
     </div>
+
 
     {% if rejected_request %}
 
@@ -172,6 +198,7 @@
 
     {% endif %}
 
+
     {% if error %}
 
         <div class="error">
@@ -180,6 +207,7 @@
 
     {% endif %}
 
+
     {% if message %}
 
         <div class="success">
@@ -187,6 +215,7 @@
         </div>
 
     {% endif %}
+
 
     <form method="post">
 
@@ -205,6 +234,7 @@
             required
         >
 
+
         <label for="password">
             كلمة المرور
         </label>
@@ -217,11 +247,25 @@
             required
         >
 
+
         <button type="submit">
             دخول
         </button>
 
     </form>
+
+
+    <!-- =================================================
+         نسيت كلمة المرور
+         ================================================= -->
+
+    <a
+        href="{% url 'password_reset_request' %}"
+        class="forgot-password"
+    >
+        🔑 نسيت كلمة المرور؟
+    </a>
+
 
     <a
         href="{% url 'home' %}"

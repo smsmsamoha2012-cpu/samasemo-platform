@@ -1,0 +1,920 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>اسأل مدرس - {{ lesson.title }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #fffaf5;
+            color: #243f6b;
+        }
+
+        .container {
+            width: min(900px, 94%);
+            margin: 30px auto;
+        }
+
+        .top-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .top-card h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+        }
+
+        .top-card p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 18px;
+            background: #f0f3f8;
+            color: #243f6b;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .back-btn:hover {
+            background: #e2e7ef;
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background: #e8f5e9;
+            color: #256029;
+        }
+
+        .question-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.07);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .question-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .date {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.answered {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .student-message {
+            background: #eef4ff;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .student-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .message-text {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .media-box {
+            margin-top: 12px;
+        }
+
+        .media-box img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            display: block;
+        }
+
+        audio {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .replies {
+            margin-top: 15px;
+        }
+
+        .reply-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #294a7c;
+        }
+
+        .reply-card {
+            background: #f8f8f8;
+            border-right: 4px solid #294a7c;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .reply-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #294a7c;
+        }
+
+        .new-question {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-top: 25px;
+        }
+
+        .new-question h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        .hint {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 130px;
+            resize: vertical;
+            border: 1px solid #ddd;
+            border-radius: 14px;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: #294a7c;
+        }
+
+        .file-group {
+            margin-top: 15px;
+        }
+
+        .file-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        .record-section {
+            margin-top: 20px;
+            padding: 18px;
+            background: #f8f9fb;
+            border-radius: 15px;
+        }
+
+        .record-section h3 {
+            margin-top: 0;
+            font-size: 17px;
+        }
+
+        .record-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .record-btn {
+            background: #294a7c;
+            color: white;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .record-btn:hover {
+            opacity: 0.9;
+        }
+
+        .stop-btn {
+            background: #b33a3a;
+            color: white;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .audio-preview {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .audio-preview p {
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .send-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #294a7c;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .send-btn:hover {
+            opacity: 0.92;
+        }
+
+        .empty {
+            background: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 18px;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+                margin: 15px auto;
+            }
+
+            .top-card,
+            .question-card,
+            .new-question {
+                padding: 17px;
+            }
+
+            .top-card h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- عنوان الصفحة -->
+    <div class="top-card">
+
+        <h1>👩‍🏫 اسأل مدرس</h1>
+
+        <p>
+            الدرس:
+            <strong>{{ lesson.title }}</strong>
+        </p>
+
+        {% if subject %}
+            <p>
+                المادة:
+                <strong>{{ subject }}</strong>
+            </p>
+        {% endif %}
+
+        <a href="{% url 'subject_lessons' lesson.subject %}" class="back-btn">
+            ← الرجوع للدرس
+        </a>
+
+    </div>
+
+
+    <!-- رسائل Django -->
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+
+    <!-- الأسئلة السابقة -->
+    {% if questions %}
+
+        {% for question in questions %}
+
+            <div class="question-card">
+
+                <div class="question-header">
+
+                    <div class="question-title">
+                        ❓ سؤالك
+                    </div>
+
+                    <div>
+
+                        {% if question.status == "answered" %}
+                            <span class="status answered">
+                                تم الرد ✅
+                            </span>
+                        {% else %}
+                            <span class="status pending">
+                                في انتظار الرد ⏳
+                            </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="date">
+                        {{ question.created_at|date:"Y/m/d - h:i A" }}
+                    </div>
+
+                </div>
+
+
+                <!-- رسالة الطالب -->
+                <div class="student-message">
+
+                    <div class="student-label">
+                        👩‍🎓 سؤالك:
+                    </div>
+
+                    {% if question.message %}
+                        <div class="message-text">
+                            {{ question.message }}
+                        </div>
+                    {% endif %}
+
+
+                    {% if question.image %}
+                        <div class="media-box">
+
+                            <img
+                                src="{{ question.image.url }}"
+                                alt="صورة السؤال"
+                            >
+
+                        </div>
+                    {% endif %}
+
+
+                    {% if question.audio %}
+                        <div class="media-box">
+
+                            <audio controls>
+                                <source src="{{ question.audio.url }}">
+                                المتصفح لا يدعم تشغيل التسجيل الصوتي.
+                            </audio>
+
+                        </div>
+                    {% endif %}
+
+                </div>
+
+
+                <!-- ردود المدرس -->
+                {% if question.replies.all %}
+
+                    <div class="replies">
+
+                        <div class="reply-title">
+                            👨‍🏫 رد المدرس:
+                        </div>
+
+                        {% for reply in question.replies.all %}
+
+                            <div class="reply-card">
+
+                                <div class="reply-label">
+                                    👨‍🏫 المدرس
+                                </div>
+
+                                {% if reply.message %}
+                                    <div class="message-text">
+                                        {{ reply.message }}
+                                    </div>
+                                {% endif %}
+
+
+                                {% if reply.image %}
+                                    <div class="media-box">
+
+                                        <img
+                                            src="{{ reply.image.url }}"
+                                            alt="صورة رد المدرس"
+                                        >
+
+                                    </div>
+                                {% endif %}
+
+
+                                {% if reply.audio %}
+                                    <div class="media-box">
+
+                                        <audio controls>
+                                            <source src="{{ reply.audio.url }}">
+                                            المتصفح لا يدعم تشغيل التسجيل الصوتي.
+                                        </audio>
+
+                                    </div>
+                                {% endif %}
+
+
+                                <div class="date" style="margin-top: 10px;">
+                                    {{ reply.created_at|date:"Y/m/d - h:i A" }}
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="empty">
+            <div style="font-size: 40px;">💬</div>
+
+            <h3>
+                لسه مفيش أسئلة
+            </h3>
+
+            <p>
+                لو عندك سؤال عن الدرس، اكتبيه هنا والمدرس هيرد عليكي.
+            </p>
+        </div>
+
+    {% endif %}
+
+
+    <!-- إرسال سؤال جديد -->
+    <div class="new-question">
+
+        <h2>
+            ✏️ اسألي المدرس
+        </h2>
+
+        <div class="hint">
+            ممكن تكتبي سؤالك، أو تبعتي صورة، أو تسجلي صوت.
+        </div>
+
+
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+            id="questionForm"
+        >
+
+            {% csrf_token %}
+
+
+            <!-- الرسالة -->
+            <textarea
+                name="message"
+                id="message"
+                placeholder="اكتبي سؤالك عن الدرس هنا..."
+            ></textarea>
+
+
+            <!-- الصورة -->
+            <div class="file-group">
+
+                <label for="image">
+                    🖼️ إرفاق صورة
+                </label>
+
+                <input
+                    type="file"
+                    name="image"
+                    id="image"
+                    accept="image/jpeg,image/png,image/webp"
+                >
+
+            </div>
+
+
+            <!-- تسجيل صوتي -->
+            <div class="record-section">
+
+                <h3>
+                    🎤 تسجيل سؤال صوتي
+                </h3>
+
+                <div class="record-buttons">
+
+                    <button
+                        type="button"
+                        class="record-btn"
+                        id="startRecording"
+                    >
+                        🎙️ بدء التسجيل
+                    </button>
+
+                    <button
+                        type="button"
+                        class="stop-btn"
+                        id="stopRecording"
+                    >
+                        ⏹️ إيقاف التسجيل
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="recordingStatus"
+                    style="margin-top: 10px; color: #777;"
+                ></div>
+
+
+                <div
+                    class="audio-preview"
+                    id="audioPreview"
+                >
+
+                    <p>
+                        التسجيل:
+                    </p>
+
+                    <audio
+                        id="audioPlayer"
+                        controls
+                    ></audio>
+
+                    <button
+                        type="button"
+                        id="deleteAudio"
+                        style="
+                            margin-top:10px;
+                            background:#eee;
+                            padding:8px 14px;
+                            border-radius:8px;
+                        "
+                    >
+                        حذف التسجيل
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- Hidden audio -->
+            <input
+                type="file"
+                name="audio"
+                id="audioInput"
+                style="display:none;"
+            >
+
+
+            <button
+                type="submit"
+                class="send-btn"
+            >
+                📤 إرسال السؤال
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordedBlob = null;
+
+    const startButton = document.getElementById("startRecording");
+    const stopButton = document.getElementById("stopRecording");
+    const recordingStatus = document.getElementById("recordingStatus");
+
+    const audioPreview = document.getElementById("audioPreview");
+    const audioPlayer = document.getElementById("audioPlayer");
+
+    const audioInput = document.getElementById("audioInput");
+    const deleteAudio = document.getElementById("deleteAudio");
+
+    const questionForm = document.getElementById("questionForm");
+
+
+    /*
+    ==========================================
+    بدء التسجيل
+    ==========================================
+    */
+
+    startButton.addEventListener("click", async function () {
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+
+            alert("المتصفح لا يدعم تسجيل الصوت.");
+
+            return;
+        }
+
+
+        try {
+
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+
+
+            audioChunks = [];
+
+
+            mediaRecorder =
+                new MediaRecorder(stream);
+
+
+            mediaRecorder.addEventListener(
+                "dataavailable",
+                function (event) {
+
+                    if (event.data.size > 0) {
+
+                        audioChunks.push(event.data);
+
+                    }
+
+                }
+            );
+
+
+            mediaRecorder.addEventListener(
+                "stop",
+                function () {
+
+                    recordedBlob =
+                        new Blob(
+                            audioChunks,
+                            {
+                                type: mediaRecorder.mimeType
+                            }
+                        );
+
+
+                    const audioUrl =
+                        URL.createObjectURL(
+                            recordedBlob
+                        );
+
+
+                    audioPlayer.src = audioUrl;
+
+                    audioPreview.style.display = "block";
+
+
+                    /*
+                    تحويل التسجيل إلى File
+                    */
+
+                    const extension =
+                        mediaRecorder.mimeType.includes("webm")
+                            ? "webm"
+                            : "wav";
+
+
+                    const audioFile =
+                        new File(
+                            [recordedBlob],
+                            "teacher_question." + extension,
+                            {
+                                type: recordedBlob.type
+                            }
+                        );
+
+
+                    /*
+                    وضع التسجيل داخل input
+                    */
+
+                    const dataTransfer =
+                        new DataTransfer();
+
+                    dataTransfer.items.add(audioFile);
+
+                    audioInput.files =
+                        dataTransfer.files;
+
+
+                    recordingStatus.textContent =
+                        "تم تسجيل الصوت ✅";
+
+
+                    stream
+                        .getTracks()
+                        .forEach(
+                            track => track.stop()
+                        );
+
+                }
+            );
+
+
+            mediaRecorder.start();
+
+
+            startButton.style.display = "none";
+
+            stopButton.style.display = "inline-block";
+
+            recordingStatus.textContent =
+                "جاري التسجيل... 🎙️";
+
+
+        } catch (error) {
+
+            alert(
+                "لم يتم السماح باستخدام الميكروفون."
+            );
+
+            console.error(error);
+
+        }
+
+    });
+
+
+    /*
+    ==========================================
+    إيقاف التسجيل
+    ==========================================
+    */
+
+    stopButton.addEventListener(
+        "click",
+        function () {
+
+            if (
+                mediaRecorder &&
+                mediaRecorder.state !== "inactive"
+            ) {
+
+                mediaRecorder.stop();
+
+            }
+
+
+            startButton.style.display =
+                "inline-block";
+
+            stopButton.style.display =
+                "none";
+
+        }
+    );
+
+
+    /*
+    ==========================================
+    حذف التسجيل
+    ==========================================
+    */
+
+    deleteAudio.addEventListener(
+        "click",
+        function () {
+
+            audioInput.value = "";
+
+            audioPlayer.src = "";
+
+            audioPreview.style.display =
+                "none";
+
+            recordedBlob = null;
+
+            recordingStatus.textContent =
+                "";
+
+        }
+    );
+
+
+    /*
+    ==========================================
+    التأكد قبل الإرسال
+    ==========================================
+    */
+
+    questionForm.addEventListener(
+        "submit",
+        function (event) {
+
+            const message =
+                document.getElementById("message")
+                    .value
+                    .trim();
+
+            const image =
+                document.getElementById("image")
+                    .files
+                    .length;
+
+            const audio =
+                document.getElementById("audioInput")
+                    .files
+                    .length;
+
+
+            if (
+                !message &&
+                !image &&
+                !audio
+            ) {
+
+                event.preventDefault();
+
+                alert(
+                    "اكتبي سؤالك أو أرفقي صورة أو سجلي رسالة صوتية."
+                );
+
+                return;
+
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+</html>

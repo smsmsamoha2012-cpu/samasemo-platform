@@ -99,6 +99,43 @@
             margin: 0;
         }
 
+        /* ========================= */
+        /* مساعد المنصة */
+        /* ========================= */
+
+        .ai-card {
+            background: linear-gradient(
+                135deg,
+                #ffffff,
+                #f2f6fc
+            );
+
+            border: 2px solid #e4ebf5;
+        }
+
+        .ai-card .icon {
+            font-size: 55px;
+        }
+
+        .ai-card h2 {
+            color: #294a7c;
+        }
+
+        .ai-card p {
+            color: #68758a;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 6px 13px;
+            border-radius: 20px;
+            background: #294a7c;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
         .support {
             margin-top: 45px;
             background: white;
@@ -110,6 +147,38 @@
             color: #168a37;
             font-weight: bold;
             text-decoration: none;
+        }
+
+        /* ========================= */
+        /* الموبايل */
+        /* ========================= */
+
+        @media (max-width: 600px) {
+
+            .main {
+                margin: 45px auto;
+            }
+
+            .main h1 {
+                font-size: 30px;
+            }
+
+            .main p {
+                font-size: 16px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 25px 18px;
+            }
+
+            .logo {
+                font-size: 19px;
+            }
+
         }
 
     </style>
@@ -136,6 +205,7 @@
         اختار الطريقة المناسبة للدخول إلى المنصة
         وابدء رحلتك التعليمية.
     </p>
+
 
     <div class="cards">
 
@@ -209,6 +279,36 @@
             <p>
                 متابعة الطالب والاشتراكات والنتائج.
             </p>
+
+        </a>
+
+
+        <!-- ========================= -->
+        <!-- مساعد المنصة -->
+        <!-- ========================= -->
+
+        <a
+            href="{% url 'platform_ai' %}"
+            class="card ai-card"
+        >
+
+            <div class="icon">
+                🤖
+            </div>
+
+            <h2>
+                مساعد المنصة
+            </h2>
+
+            <p>
+                عندك مشكلة في التسجيل أو الدخول
+                أو الاشتراك أو استخدام المنصة؟
+                اسألي المساعد الذكي.
+            </p>
+
+            <span class="ai-badge">
+                اسأليني 🤖
+            </span>
 
         </a>
 

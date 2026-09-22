@@ -82,6 +82,12 @@ class Student(models.Model):
         verbose_name="رقم الطالب",
     )
 
+    email = models.EmailField(
+        max_length=254,
+        blank=False,
+        verbose_name="البريد الإلكتروني",
+    )
+
     parent_phone = models.CharField(
         max_length=20,
         default="",
@@ -2033,6 +2039,7 @@ class AIConversation(models.Model):
     ]
 
     CONTEXT_CHOICES = [
+        ("platform", "مساعد المنصة"),
         ("subject", "منهج / مادة"),
         ("skill", "مهارة"),
     ]
@@ -2160,6 +2167,177 @@ class AIMessage(models.Model):
         return (
             f"{self.conversation.student.student_name} - "
             f"{self.sender_type}"
+        )
+
+
+# ====================================================
+# Password Reset OTP
+# ====================================================
+
+class PasswordResetOTP(models.Model):
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="password_reset_otps",
+        verbose_name="الطالب",
+    )
+
+    code = models.CharField(
+        max_length=6,
+        verbose_name="كود التحقق",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ إنشاء الكود",
+    )
+
+    expires_at = models.DateTimeField(
+        verbose_name="تاريخ انتهاء الكود",
+    )
+
+    is_used = models.BooleanField(
+        default=False,
+        verbose_name="تم استخدام الكود",
+    )
+
+    attempts = models.PositiveIntegerField(
+        default=0,
+        verbose_name="عدد المحاولات",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "كود استعادة كلمة المرور"
+        verbose_name_plural = "أكواد استعادة كلمة المرور"
+
+    def __str__(self):
+        return (
+            f"{self.student.student_name} - "
+            f"{self.code}"
+        )
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+
+# ====================================================
+# Ask Teacher
+# ====================================================
+
+class TeacherQuestion(models.Model):
+
+    STATUS_CHOICES = [
+        ("pending", "في انتظار الرد"),
+        ("answered", "تم الرد"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="teacher_questions",
+        verbose_name="الطالب",
+    )
+
+    lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name="teacher_questions",
+        verbose_name="الدرس",
+    )
+
+    message = models.TextField(
+        blank=True,
+        verbose_name="رسالة الطالب",
+    )
+
+    image = models.ImageField(
+        upload_to="teacher_questions/images/",
+        blank=True,
+        null=True,
+        verbose_name="صورة الطالب",
+    )
+
+    audio = models.FileField(
+        upload_to="teacher_questions/audio/",
+        blank=True,
+        null=True,
+        verbose_name="تسجيل الطالب",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        verbose_name="الحالة",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ السؤال",
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="آخر تحديث",
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "سؤال مدرس"
+        verbose_name_plural = "أسئلة المدرس"
+
+    def __str__(self):
+        return (
+            f"{self.student.student_name} - "
+            f"{self.lesson.title}"
+        )
+
+
+class TeacherReply(models.Model):
+
+    question = models.ForeignKey(
+        TeacherQuestion,
+        on_delete=models.CASCADE,
+        related_name="replies",
+        verbose_name="السؤال",
+    )
+
+    message = models.TextField(
+        blank=True,
+        verbose_name="رد المدرس",
+    )
+
+    image = models.ImageField(
+        upload_to="teacher_questions/replies/images/",
+        blank=True,
+        null=True,
+        verbose_name="صورة المدرس",
+    )
+
+    audio = models.FileField(
+        upload_to="teacher_questions/replies/audio/",
+        blank=True,
+        null=True,
+        verbose_name="تسجيل المدرس",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ الرد",
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "رد مدرس"
+        verbose_name_plural = "ردود المدرسين"
+
+    def __str__(self):
+        return (
+            f"رد على سؤال "
+            f"{self.question.student.student_name}"
         )
 
 

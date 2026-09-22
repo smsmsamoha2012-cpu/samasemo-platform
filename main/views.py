@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote
 import base64
+import secrets
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db import transaction
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -29,6 +32,7 @@ from .models import (
     HomeworkSubmission,
     Lesson,
     LessonWatchStat,
+    PasswordResetOTP,
     PlatformSettings,
     Skill,
     SkillLesson,
@@ -41,6 +45,8 @@ from .models import (
     Student,
     SubjectSubscription,
     SubscriptionRequest,
+    TeacherQuestion,
+    TeacherReply,
 )
 
 
@@ -59,6 +65,20 @@ ALLOWED_AI_IMAGE_TYPES = {
     "image/png",
     "image/webp",
 }
+
+MAX_TEACHER_IMAGE_SIZE = 10 * 1024 * 1024
+
+ALLOWED_TEACHER_IMAGE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+MAX_TEACHER_AUDIO_SIZE = 20 * 1024 * 1024
+
+PASSWORD_RESET_MAX_ATTEMPTS = 5
+PASSWORD_RESET_CODE_MINUTES = 10
+PASSWORD_RESET_RESEND_SECONDS = 60
 
 
 # =========================================================
@@ -103,6 +123,66 @@ def build_whatsapp_link(number):
         digits = "20" + digits[1:]
 
     return f"https://wa.me/{digits}"
+
+
+def mask_email(email):
+    """
+    إخفاء جزء من البريد الإلكتروني عند عرضه للطالب.
+    مثال:
+    samasemo@gmail.com
+    تصبح:
+    s*****@gmail.com
+    """
+
+    email = (email or "").strip()
+
+    if "@" not in email:
+        return ""
+
+    username, domain = email.split(
+        "@",
+        1,
+    )
+
+    if not username:
+        return f"***@{domain}"
+
+    if len(username) == 1:
+        masked_username = "*"
+    elif len(username) == 2:
+        masked_username = (
+            username[0]
+            + "*"
+        )
+    else:
+        masked_username = (
+            username[0]
+            + "*" * min(
+                len(username) - 1,
+                5,
+            )
+        )
+
+    return (
+        f"{masked_username}@{domain}"
+    )
+
+
+def clear_password_reset_session(request):
+    request.session.pop(
+        "password_reset_student_id",
+        None,
+    )
+
+    request.session.pop(
+        "password_reset_verified",
+        None,
+    )
+
+    request.session.pop(
+        "password_reset_sent_at",
+        None,
+    )
 
 
 # =========================================================
@@ -538,8 +618,6 @@ def get_skill_progress_data(student):
             for lesson in lessons
         ]
 
-        # لو SkillLesson سيُربط مستقبلًا بـ LessonWatchStat
-        # نستخدم وجود إحصائية المشاهدة إن كان الربط موجودًا.
         watched_skill_lessons = set()
 
         if lesson_ids:
@@ -1859,7 +1937,6 @@ def curriculum_page(request):
             "student": student_obj,
             "subjects": subjects,
 
-            # بيانات التقدم الجديدة
             "progress": progress,
             "curriculum_progress": progress,
 
@@ -1899,7 +1976,6 @@ def skills_page(request):
             "student": student_obj,
             "skills": skills,
 
-            # بيانات التقدم الجديدة
             "progress": progress,
             "skills_progress": progress,
 
@@ -2036,7 +2112,6 @@ def subject_lessons(request, subject):
         )
     }
 
-    # حالة مشاهدة كل حصة
     lesson_watch_stats = {
         stat.lesson_id: stat
         for stat in (
@@ -2194,12 +2269,224 @@ def subject_lessons(request, subject):
             "remaining_lessons": remaining_lessons,
             "submissions": submissions,
 
-            # الجديد
             "lesson_progress": lesson_progress,
             "lesson_watch_stats": lesson_watch_stats,
 
             "upload_message": upload_message,
             "upload_error": upload_error,
+            "support_whatsapp": build_whatsapp_link(
+                settings_obj.whatsapp_number
+            ),
+        },
+    )
+
+
+# =========================================================
+# اسأل مدرس
+# =========================================================
+
+@login_required
+def ask_teacher(request, lesson_id):
+    student_obj = get_current_student(request)
+
+    if not student_obj or not student_obj.is_active:
+        return redirect("old_student")
+
+    lesson = get_object_or_404(
+        Lesson,
+        pk=lesson_id,
+        is_active=True,
+    )
+
+    subscription_obj = (
+        SubjectSubscription.objects
+        .filter(
+            student=student_obj,
+            subject=lesson.subject,
+            is_active=True,
+        )
+        .first()
+    )
+
+    if not subscription_obj:
+        raise Http404(
+            "لا يوجد اشتراك في المادة."
+        )
+
+    subscription_obj.check_expired()
+
+    if not subscription_obj.is_usable:
+        raise Http404(
+            "الاشتراك غير متاح."
+        )
+
+    if (
+        lesson.grade != student_obj.grade
+        or lesson.school_type != student_obj.school_type
+    ):
+        raise Http404(
+            "لا يوجد وصول لهذا الدرس."
+        )
+
+    if request.method == "POST":
+
+        message_text = (
+            request.POST.get(
+                "message",
+                "",
+            )
+            or ""
+        ).strip()
+
+        image = request.FILES.get("image")
+        audio = request.FILES.get("audio")
+
+        if not message_text and not image and not audio:
+            messages.error(
+                request,
+                "اكتبي سؤالك أو أرفقي صورة أو تسجيلًا صوتيًا.",
+            )
+
+            return redirect(
+                "ask_teacher",
+                lesson_id=lesson.id,
+            )
+
+        if image:
+
+            content_type = (
+                getattr(
+                    image,
+                    "content_type",
+                    "",
+                )
+                or ""
+            ).lower()
+
+            if content_type not in ALLOWED_TEACHER_IMAGE_TYPES:
+
+                messages.error(
+                    request,
+                    "من فضلك اختاري صورة بصيغة JPG أو PNG أو WEBP.",
+                )
+
+                return redirect(
+                    "ask_teacher",
+                    lesson_id=lesson.id,
+                )
+
+            if image.size > MAX_TEACHER_IMAGE_SIZE:
+
+                messages.error(
+                    request,
+                    "الصورة كبيرة جدًا. الحد الأقصى 10 ميجابايت.",
+                )
+
+                return redirect(
+                    "ask_teacher",
+                    lesson_id=lesson.id,
+                )
+
+        if audio:
+
+            audio_content_type = (
+                getattr(
+                    audio,
+                    "content_type",
+                    "",
+                )
+                or ""
+            ).lower()
+
+            audio_name = (
+                getattr(
+                    audio,
+                    "name",
+                    "",
+                )
+                or ""
+            ).lower()
+
+            allowed_audio_extensions = (
+                ".mp3",
+                ".wav",
+                ".ogg",
+                ".webm",
+                ".m4a",
+                ".aac",
+            )
+
+            valid_audio = (
+                audio_content_type.startswith("audio/")
+                or audio_name.endswith(
+                    allowed_audio_extensions
+                )
+            )
+
+            if not valid_audio:
+
+                messages.error(
+                    request,
+                    "ملف التسجيل الصوتي غير مدعوم.",
+                )
+
+                return redirect(
+                    "ask_teacher",
+                    lesson_id=lesson.id,
+                )
+
+            if audio.size > MAX_TEACHER_AUDIO_SIZE:
+
+                messages.error(
+                    request,
+                    "التسجيل الصوتي كبير جدًا. الحد الأقصى 20 ميجابايت.",
+                )
+
+                return redirect(
+                    "ask_teacher",
+                    lesson_id=lesson.id,
+                )
+
+        TeacherQuestion.objects.create(
+            student=student_obj,
+            lesson=lesson,
+            message=message_text,
+            image=image,
+            audio=audio,
+            status="pending",
+        )
+
+        messages.success(
+            request,
+            "تم إرسال سؤالك للمدرس بنجاح ✅",
+        )
+
+        return redirect(
+            "ask_teacher",
+            lesson_id=lesson.id,
+        )
+
+    questions = (
+        TeacherQuestion.objects
+        .filter(
+            student=student_obj,
+            lesson=lesson,
+        )
+        .prefetch_related("replies")
+        .order_by("created_at")
+    )
+
+    settings_obj = get_platform_settings()
+
+    return render(
+        request,
+        "main/ask_teacher.html",
+        {
+            "student": student_obj,
+            "lesson": lesson,
+            "subject": lesson.subject,
+            "subscription": subscription_obj,
+            "questions": questions,
             "support_whatsapp": build_whatsapp_link(
                 settings_obj.whatsapp_number
             ),
@@ -2900,7 +3187,6 @@ def skill_detail(request, skill_id):
         .order_by("-created_at")
     )
 
-    # حالة مشاهدة حصص المهارة
     lesson_progress = []
 
     for lesson in lessons:
@@ -2992,7 +3278,6 @@ def skill_detail(request, skill_id):
             ),
             "homework_results": skill_homework_results,
 
-            # الجديد
             "lesson_progress": lesson_progress,
 
             "support_whatsapp": build_whatsapp_link(
@@ -3000,130 +3285,10 @@ def skill_detail(request, skill_id):
             ),
         },
     )
- # =========================================================
+
+
+# =========================================================
 # تسليم واجب المهارات
-# =========================================================
-
-@login_required
-def skill_homework_detail(request, homework_id):
-    student_obj = get_current_student(request)
-
-    if not student_obj or not student_obj.is_active:
-        return redirect("old_student")
-
-    homework = get_object_or_404(
-        SkillHomework,
-        pk=homework_id,
-        is_active=True,
-    )
-
-    # التأكد أن الطالب مشترك في المهارة
-    subscription_obj = (
-        SkillSubscription.objects
-        .filter(
-            student=student_obj,
-            skill=homework.skill,
-            is_active=True,
-        )
-        .first()
-    )
-
-    if not subscription_obj:
-        raise Http404(
-            "هذا الواجب غير متاح لهذا الطالب."
-        )
-
-    # الواجب المرتبط بالحصة
-    lesson = homework.lesson
-
-    # التسليم السابق إن وجد
-    submission = (
-        SkillHomeworkSubmission.objects
-        .filter(
-            student=student_obj,
-            homework=homework,
-        )
-        .first()
-    )
-
-    # نتيجة الواجب إن وجدت
-    result = (
-        SkillHomeworkResult.objects
-        .filter(
-            student=student_obj,
-            homework=homework,
-        )
-        .first()
-    )
-
-    if request.method == "POST":
-
-        uploaded_file = request.FILES.get(
-            "uploaded_file"
-        )
-
-        if not uploaded_file:
-            messages.error(
-                request,
-                "من فضلك ارفعي صورة أو فيديو للحل."
-            )
-
-        else:
-
-            if submission:
-                submission.uploaded_file = uploaded_file
-                submission.status = "submitted"
-                submission.submitted_at = timezone.now()
-                submission.save(
-                    update_fields=[
-                        "uploaded_file",
-                        "status",
-                        "submitted_at",
-                    ]
-                )
-
-            else:
-                submission = (
-                    SkillHomeworkSubmission.objects.create(
-                        student=student_obj,
-                        homework=homework,
-                        uploaded_file=uploaded_file,
-                        status="submitted",
-                        submitted_at=timezone.now(),
-                    )
-                )
-
-            messages.success(
-                request,
-                "تم تسليم الواجب بنجاح."
-            )
-
-            return redirect(
-                "skill_homework_detail",
-                homework_id=homework.id,
-            )
-
-    settings_obj = get_platform_settings()
-
-    return render(
-        request,
-        "main/skill_homework_detail.html",
-        {
-            "student": student_obj,
-            "skill": homework.skill,
-            "homework": homework,
-            "lesson": lesson,
-            "subscription": subscription_obj,
-            "submission": submission,
-            "result": result,
-            "support_whatsapp": build_whatsapp_link(
-                settings_obj.whatsapp_number
-            ),
-        },
-    )
-
-# =========================================================
-# Skill Homework Detail
 # =========================================================
 
 @login_required
@@ -3397,15 +3562,9 @@ def skill_homework_detail(request, homework_id):
         },
     )
 
-# =========================================================
-# ولي الأمر
-# =========================================================
 
 # =========================================================
 # ولي الأمر
-# =========================================================
-# =========================================================
-# صفحة ولي الأمر
 # =========================================================
 
 def parent(request):
@@ -3423,7 +3582,6 @@ def parent(request):
     def normalize_phone(phone):
         phone = str(phone or "").strip()
 
-        # تحويل الأرقام العربية إلى أرقام إنجليزية
         arabic_digits = "٠١٢٣٤٥٦٧٨٩"
         english_digits = "0123456789"
 
@@ -3436,7 +3594,6 @@ def parent(request):
             translation_table
         )
 
-        # إزالة المسافات والشرطات والأقواس
         phone = (
             phone.replace(" ", "")
             .replace("-", "")
@@ -3444,7 +3601,6 @@ def parent(request):
             .replace(")", "")
         )
 
-        # توحيد أرقام مصر لو اتكتبت بصيغة +20
         if phone.startswith("+20"):
             phone = "0" + phone[3:]
 
@@ -3475,7 +3631,6 @@ def parent(request):
 
         else:
 
-            # جلب الطلاب ثم مقارنة الرقم بعد توحيد صيغته
             all_students = (
                 Student.objects
                 .exclude(
@@ -3503,7 +3658,6 @@ def parent(request):
 
                 students = matching_students
 
-                # حفظ الرقم الموحد في الجلسة
                 request.session[
                     "parent_phone"
                 ] = normalized_phone
@@ -3535,13 +3689,6 @@ def parent(request):
 # =========================================================
 
 def parent_student(request, student_id):
-    """
-    عرض بيانات طالب معين لولي الأمر.
-
-    يتم التأكد أن رقم ولي الأمر المحفوظ في الجلسة
-    هو نفس الرقم الموجود في بيانات الطالب.
-    """
-
     parent_phone = (
         request.session.get(
             "parent_phone",
@@ -3551,10 +3698,8 @@ def parent_student(request, student_id):
     ).strip()
 
     if not parent_phone:
-
         return redirect("parent")
 
-    # توحيد رقم ولي الأمر الموجود في الجلسة
     arabic_digits = "٠١٢٣٤٥٦٧٨٩"
     english_digits = "0123456789"
 
@@ -3584,13 +3729,11 @@ def parent_student(request, student_id):
     ):
         parent_phone = "0" + parent_phone[2:]
 
-    # نجيب الطالب أولًا
     student_obj = get_object_or_404(
         Student,
         id=student_id,
     )
 
-    # نوحد رقم ولي الأمر المحفوظ للطالب
     student_phone = (
         str(
             student_obj.parent_phone
@@ -3613,7 +3756,6 @@ def parent_student(request, student_id):
     ):
         student_phone = "0" + student_phone[2:]
 
-    # التأكد أن الطالب تابع لنفس ولي الأمر
     if student_phone != parent_phone:
         return redirect("parent")
 
@@ -3625,22 +3767,12 @@ def parent_student(request, student_id):
         },
     )
 
-# =========================================================
-# منهج الطالب - لولي الأمر
-# =========================================================
 
 # =========================================================
 # منهج الطالب - لولي الأمر
 # =========================================================
 
 def parent_curriculum(request, student_id):
-    """
-    عرض منهج طالب معين لولي الأمر.
-
-    يتم التأكد أولًا أن الطالب مرتبط بنفس
-    رقم ولي الأمر الموجود في الجلسة.
-    """
-
     parent_phone = (
         request.session.get(
             "parent_phone",
@@ -3649,18 +3781,15 @@ def parent_curriculum(request, student_id):
         or ""
     ).strip()
 
-    # لو ولي الأمر لم يدخل رقمه أولًا
     if not parent_phone:
         return redirect("parent")
 
-    # التأكد أن الطالب تابع لرقم ولي الأمر
     student_obj = get_object_or_404(
         Student,
         id=student_id,
         parent_phone=parent_phone,
     )
 
-    # بيانات تقدم الطالب في المنهج
     progress = get_subject_progress_data(
         student_obj
     )
@@ -3678,18 +3807,13 @@ def parent_curriculum(request, student_id):
             ),
         },
     )
+
+
 # =========================================================
 # مهارات الطالب - لولي الأمر
 # =========================================================
 
 def parent_skills(request, student_id):
-    """
-    عرض مهارات طالب معين لولي الأمر.
-
-    يتم التأكد أولًا أن الطالب مرتبط بنفس
-    رقم ولي الأمر الموجود في الجلسة.
-    """
-
     parent_phone = (
         request.session.get(
             "parent_phone",
@@ -3698,18 +3822,15 @@ def parent_skills(request, student_id):
         or ""
     ).strip()
 
-    # لو ولي الأمر لم يدخل رقمه أولًا
     if not parent_phone:
         return redirect("parent")
 
-    # التأكد أن الطالب تابع لنفس رقم ولي الأمر
     student_obj = get_object_or_404(
         Student,
         id=student_id,
         parent_phone=parent_phone,
     )
 
-    # بيانات تقدم الطالب في المهارات
     progress = get_skill_progress_data(
         student_obj
     )
@@ -3728,384 +3849,196 @@ def parent_skills(request, student_id):
         },
     )
 
-def ai_chat(request):
-    student_obj = get_current_student(request)
 
-    if not student_obj or not student_obj.is_active:
+# =========================================================
+# AI Chat
+# =========================================================
+
+@login_required
+def ai_chat(request):
+    """
+    مساعد المنصة بالذكاء الاصطناعي.
+
+    المساعد هنا خاص بمشاكل واستخدام المنصة:
+    - التسجيل
+    - تسجيل الدخول
+    - نسيان كلمة المرور
+    - الاشتراكات
+    - ظهور المواد والمهارات
+    - مشاكل الحصص والفيديوهات والواجبات
+    - شرح طريقة استخدام المنصة
+
+    أما الأسئلة الخاصة بشرح محتوى الحصة نفسها
+    فتظل من خلال "اسأل مدرس".
+    """
+
+    student = get_current_student(request)
+
+    if not student:
+        messages.error(
+            request,
+            "لازم تسجلي دخولك الأول."
+        )
         return redirect("old_student")
 
-    requested_subject = (
-        request.GET.get(
-            "subject",
-            request.POST.get(
-                "subject",
-                "",
-            ),
-        )
-        or ""
-    ).strip()
-
-    requested_skill_id = (
-        request.GET.get(
-            "skill",
-            request.POST.get(
-                "skill",
-                "",
-            ),
-        )
-        or ""
-    ).strip()
-
-    active_subjects = {
-        str(subject).strip()
-        for subject in get_student_subjects(
-            student_obj
-        )
-    }
-
-    active_skill_ids = set(
-        SkillSubscription.objects
-        .filter(
-            student=student_obj,
-            is_active=True,
-            skill__is_active=True,
-        )
-        .values_list(
-            "skill_id",
-            flat=True,
-        )
+    conversation, _ = AIConversation.objects.get_or_create(
+        student=student,
+        context_type="platform",
+        status="open",
+        defaults={
+            "title": "مساعد المنصة",
+        },
     )
-
-    context_type = None
-    subject_name = ""
-    skill_obj = None
-
-    if (
-        requested_subject
-        and requested_subject in active_subjects
-    ):
-        context_type = "subject"
-        subject_name = requested_subject
-
-    elif (
-        requested_skill_id
-        and requested_skill_id.isdigit()
-    ):
-        skill_id = int(requested_skill_id)
-
-        if skill_id not in active_skill_ids:
-            return redirect("student_dashboard")
-
-        skill_obj = (
-            Skill.objects
-            .filter(
-                pk=skill_id,
-                is_active=True,
-            )
-            .first()
-        )
-
-        if not skill_obj:
-            return redirect("student_dashboard")
-
-        context_type = "skill"
-
-    else:
-        return redirect("student_dashboard")
-
-    conversation = (
-        AIConversation.objects
-        .filter(
-            student=student_obj,
-            status="open",
-            context_type=context_type,
-            subject=subject_name,
-            skill=skill_obj,
-        )
-        .order_by("-updated_at")
-        .first()
-    )
-
-    if not conversation:
-        if context_type == "subject":
-            conversation_title = (
-                f"مساعد مادة {subject_name}"
-            )
-        else:
-            conversation_title = (
-                f"مساعد مهارة {skill_obj.name}"
-            )
-
-        conversation = (
-            AIConversation.objects.create(
-                student=student_obj,
-                context_type=context_type,
-                subject=subject_name,
-                skill=skill_obj,
-                title=conversation_title,
-                status="open",
-            )
-        )
 
     if request.method == "POST":
         message_text = (
-            request.POST.get(
-                "message",
-                "",
-            )
+            request.POST.get("message")
             or ""
         ).strip()
 
-        uploaded_image = (
-            request.FILES.get("image")
-        )
+        image = request.FILES.get("image")
 
-        image_data_url = None
-        image_error = None
-
-        if uploaded_image:
-            content_type = (
-                getattr(
-                    uploaded_image,
-                    "content_type",
-                    "",
-                )
-                or ""
-            ).lower()
-
-            if content_type not in ALLOWED_AI_IMAGE_TYPES:
-                image_error = (
-                    "من فضلك اختاري صورة بصيغة JPG أو PNG أو WEBP."
-                )
-
-            elif uploaded_image.size > MAX_AI_IMAGE_SIZE:
-                image_error = (
-                    "الصورة كبيرة جدًا. الحد الأقصى 10 ميجابايت."
-                )
-
-            else:
-                try:
-                    image_bytes = uploaded_image.read()
-
-                    encoded_image = (
-                        base64.b64encode(
-                            image_bytes
-                        ).decode("utf-8")
-                    )
-
-                    image_data_url = (
-                        f"data:{content_type};"
-                        f"base64,{encoded_image}"
-                    )
-
-                    uploaded_image.seek(0)
-
-                except Exception as exc:
-                    print(
-                        "AI Image Read Error:",
-                        exc,
-                    )
-
-                    image_error = (
-                        "حدثت مشكلة أثناء قراءة الصورة."
-                    )
-
-        if (
-            not message_text
-            and not uploaded_image
-        ):
-            image_error = (
-                "اكتبي سؤالك أو أرفقي صورة أولًا."
-            )
-
-        if image_error:
+        if not message_text and not image:
             messages.error(
                 request,
-                image_error,
+                "اكتبي سؤالك أو ابعتي صورة للمشكلة."
+            )
+            return redirect("ai_chat")
+
+        image_data_url = None
+
+        if image:
+            if image.size > MAX_AI_IMAGE_SIZE:
+                messages.error(
+                    request,
+                    "حجم الصورة كبير جدًا. الحد الأقصى 10 ميجابايت."
+                )
+                return redirect("ai_chat")
+
+            if image.content_type not in ALLOWED_AI_IMAGE_TYPES:
+                messages.error(
+                    request,
+                    "نوع الصورة غير مسموح. استخدمي JPG أو PNG أو WEBP."
+                )
+                return redirect("ai_chat")
+
+            image_bytes = image.read()
+            encoded_image = base64.b64encode(
+                image_bytes
+            ).decode("utf-8")
+
+            image_data_url = (
+                f"data:{image.content_type};base64,{encoded_image}"
             )
 
-            if context_type == "subject":
-                return redirect(
-                    f"{request.path}"
-                    f"?subject={quote(subject_name)}"
-                )
-
-            return redirect(
-                f"{request.path}"
-                f"?skill={skill_obj.id}"
-            )
-
-        saved_message = message_text
-
-        if uploaded_image:
-            if saved_message:
-                saved_message += (
-                    "\n\n📷 [تم إرفاق صورة]"
-                )
-            else:
-                saved_message = (
-                    "📷 [تم إرفاق صورة]"
-                )
-
-        student_message = (
-            AIMessage.objects.create(
-                conversation=conversation,
-                sender_type="student",
-                message=saved_message,
-                image=(
-                    uploaded_image
-                    if uploaded_image
-                    else None
-                ),
-            )
+        AIMessage.objects.create(
+            conversation=conversation,
+            sender_type="student",
+            message=message_text,
+            image=image if image else None,
         )
 
-        if context_type == "subject":
-            system_instructions = f"""
-أنت مساعد تعليمي داخل منصة تعليمية عربية.
+        system_instructions = """
+أنتِ "مساعد المنصة" الذكي لمنصة تعليمية عربية.
 
-السياق الحالي لهذه المحادثة هو المادة:
-{subject_name}
+مهمتك الأساسية هي مساعدة الطالب في استخدام المنصة وحل مشاكلها، وليس شرح
+محتوى الدروس بدل المدرس.
 
-استخدم سياق هذه المحادثة فقط.
+يمكنك المساعدة في:
+1. إنشاء حساب طالب جديد.
+2. تسجيل الدخول.
+3. مشاكل رقم الهاتف.
+4. مشاكل كلمة المرور.
+5. نسيان كلمة المرور وشرح خطوات الاسترداد الآمنة.
+6. الاشتراك في المواد.
+7. الاشتراك في المهارات.
+8. فهم أسعار الاشتراكات وطريقة إرسال إثبات الدفع.
+9. ظهور أو عدم ظهور المواد المشتركة.
+10. الوصول إلى المنهج.
+11. الوصول إلى المهارات.
+12. فتح الحصص والفيديوهات.
+13. الواجبات والامتحانات والنتائج.
+14. شرح طريقة التنقل داخل المنصة.
+15. مساعدة الطالب إذا أرسل صورة لشاشة بها مشكلة.
 
-لا تخلط بين هذه المحادثة وأي محادثة أخرى.
+قواعد مهمة جدًا:
 
-إذا كان السؤال خارج المادة الحالية، أخبر الطالب أن المحادثة مخصصة لهذه المادة.
+- تحدثي بالعربية وبأسلوب بسيط وودود.
+- استخدمي اللهجة المصرية الخفيفة عندما يكون ذلك مناسبًا.
+- كوني واضحة وخطوة بخطوة.
+- إذا كانت المشكلة تخص شرح درس أو حل سؤال من محتوى حصة معينة،
+  وجهي الطالب إلى زر "اسأل مدرس".
+- لا تدّعي أنكِ تستطيعين تنفيذ عملية غير متاحة لكِ.
+- لا تطلبي من الطالب إرسال كلمة المرور الحالية.
+- لا تطلبي من الطالب إرسال أي كلمة مرور في المحادثة.
+- لا تكشفي بيانات طالب آخر.
+- لا تكشفي معلومات إدارية أو سرية.
+- لا تغيري كلمة مرور الطالب اعتمادًا على رقم الهاتف فقط.
+- إذا نسي الطالب كلمة المرور، اشرحي له أن تغييرها يحتاج إلى خطوة
+  تحقق آمنة قبل تنفيذ التغيير.
+- إذا كان السؤال غير متعلق بالمنصة، أخبري الطالب بلطف أن المساعد
+  مخصص لمساعدة استخدام المنصة.
+- إذا أرسل الطالب صورة، افحصي محتواها وحاولي تحديد المشكلة الظاهرة
+  بدون اختلاق معلومات غير موجودة في الصورة.
 
-إذا أرسل الطالب صورة، تعامل معها كجزء من السؤال الحالي.
-
-إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
-
-تحدث باللغة العربية.
-
-استخدم أسلوبًا بسيطًا وتعليميًا.
-
-اشرح خطوة بخطوة.
-
-لا تخترع معلومات.
-
-إذا كان السؤال متعلقًا بواجب أو امتحان، ساعد الطالب على الفهم والتفكير.
-"""
-        else:
-            system_instructions = f"""
-أنت مساعد تعليمي داخل منصة تعليمية عربية.
-
-السياق الحالي لهذه المحادثة هو المهارة:
-{skill_obj.name}
-
-استخدم سياق هذه المحادثة فقط.
-
-لا تخلط بين هذه المحادثة وأي محادثة أخرى.
-
-إذا كان السؤال خارج المهارة الحالية، أخبر الطالب أن المحادثة مخصصة لهذه المهارة.
-
-إذا أرسل الطالب صورة، تعامل معها كجزء من السؤال الحالي.
-
-إذا كانت الصورة غير واضحة، أخبر الطالب بذلك.
-
-تحدث باللغة العربية.
-
-استخدم أسلوبًا بسيطًا وتعليميًا.
-
-اشرح خطوة بخطوة.
-
-لا تخترع معلومات.
-
-إذا كان السؤال متعلقًا بواجب أو امتحان، ساعد الطالب على الفهم والتفكير.
+أنتِ مساعد للمنصة، ولستِ المدرس المسؤول عن شرح المنهج.
 """
 
         previous_messages = (
-            AIMessage.objects
-            .filter(
-                conversation=conversation
-            )
-            .exclude(
-                pk=student_message.pk
-            )
+            conversation.messages
             .order_by("created_at")
         )
 
         api_messages = []
 
         for old_message in previous_messages:
-            if old_message.sender_type == "student":
-                old_content = []
+            role = (
+                "user"
+                if old_message.sender_type == "student"
+                else "assistant"
+            )
 
-                if old_message.message:
-                    old_content.append(
+            content = []
+
+            if old_message.message:
+                content.append(
+                    {
+                        "type": "input_text",
+                        "text": old_message.message,
+                    }
+                )
+
+            if old_message.image:
+                try:
+                    with old_message.image.open(
+                        "rb"
+                    ) as image_file:
+                        old_image_bytes = (
+                            image_file.read()
+                        )
+
+                    old_encoded = base64.b64encode(
+                        old_image_bytes
+                    ).decode("utf-8")
+
+                    content.append(
                         {
-                            "type": "input_text",
-                            "text": old_message.message,
+                            "type": "input_image",
+                            "image_url": (
+                                f"data:image/jpeg;base64,{old_encoded}"
+                            ),
                         }
                     )
+                except Exception:
+                    pass
 
-                if old_message.image:
-                    try:
-                        with old_message.image.open(
-                            "rb"
-                        ) as image_file:
-                            old_image_bytes = (
-                                image_file.read()
-                            )
-
-                        old_encoded_image = (
-                            base64.b64encode(
-                                old_image_bytes
-                            ).decode("utf-8")
-                        )
-
-                        old_image_name = (
-                            old_message.image.name.lower()
-                        )
-
-                        if old_image_name.endswith(
-                            ".png"
-                        ):
-                            old_mime = "image/png"
-
-                        elif old_image_name.endswith(
-                            ".webp"
-                        ):
-                            old_mime = "image/webp"
-
-                        else:
-                            old_mime = "image/jpeg"
-
-                        old_image_data_url = (
-                            f"data:{old_mime};"
-                            f"base64,{old_encoded_image}"
-                        )
-
-                        old_content.append(
-                            {
-                                "type": "input_image",
-                                "image_url": old_image_data_url,
-                            }
-                        )
-
-                    except Exception as exc:
-                        print(
-                            "Old AI Image Read Error:",
-                            exc,
-                        )
-
-                if old_content:
-                    api_messages.append(
-                        {
-                            "role": "user",
-                            "content": old_content,
-                        }
-                    )
-
-            elif old_message.sender_type == "ai":
-                if old_message.message:
-                    api_messages.append(
-                        {
-                            "role": "assistant",
-                            "content": old_message.message,
-                        }
-                    )
+            if content:
+                api_messages.append(
+                    {
+                        "role": role,
+                        "content": content,
+                    }
+                )
 
         current_content = []
 
@@ -4133,11 +4066,6 @@ def ai_chat(request):
         )
 
         try:
-            if not settings.OPENAI_API_KEY:
-                raise ValueError(
-                    "OPENAI_API_KEY غير موجود."
-                )
-
             client = OpenAI(
                 api_key=settings.OPENAI_API_KEY
             )
@@ -4148,77 +4076,44 @@ def ai_chat(request):
                 input=api_messages,
             )
 
-            ai_reply = (
+            ai_text = (
                 getattr(
                     response,
                     "output_text",
                     None,
                 )
-                or ""
-            ).strip()
-
-            if not ai_reply:
-                ai_reply = (
-                    "لم أستطع تكوين إجابة الآن. حاولي مرة أخرى."
-                )
-
-        except Exception as exc:
-            print(
-                "OpenAI AI Chat Error:",
-                exc,
+                or "معلش، مقدرتش أطلع رد دلوقتي. جربي تاني."
             )
 
-            ai_reply = (
-                "حصلت مشكلة مؤقتة أثناء الاتصال بالمساعد الذكي. "
-                "حاولي مرة أخرى بعد قليل."
+        except Exception:
+            ai_text = (
+                "معلش، حصلت مشكلة مؤقتة في المساعد الذكي. "
+                "جربي تاني بعد شوية."
             )
 
         AIMessage.objects.create(
             conversation=conversation,
             sender_type="ai",
-            message=ai_reply,
+            message=ai_text,
         )
 
-        conversation.updated_at = timezone.now()
+        conversation.title = "مساعد المنصة"
 
         conversation.save(
             update_fields=[
+                "title",
                 "updated_at",
             ]
         )
 
-        if context_type == "subject":
-            return redirect(
-                f"{request.path}"
-                f"?subject={quote(subject_name)}"
-            )
-
-        return redirect(
-            f"{request.path}"
-            f"?skill={skill_obj.id}"
-        )
-
-    messages_list = (
-        conversation.messages
-        .all()
-        .order_by("created_at")
-    )
-
-    django_messages = list(
-        messages.get_messages(request)
-    )
+        return redirect("ai_chat")
 
     return render(
         request,
         "main/ai_chat.html",
         {
-            "student": student_obj,
             "conversation": conversation,
-            "messages_list": messages_list,
-            "django_messages": django_messages,
-            "context_type": context_type,
-            "subject": subject_name,
-            "skill": skill_obj,
+            "student": student,
         },
     )
 
@@ -4291,5 +4186,802 @@ def prices(request):
             "grade_data": grade_data,
             "skills": skills,
             "settings": settings_obj,
+        },
+    )
+
+
+# =========================================================
+# Platform AI
+# =========================================================
+
+def platform_ai(request):
+    """
+    مساعد المنصة العام.
+
+    يعمل من الصفحة الرئيسية حتى لو الطالب غير مسجل دخول.
+    المحادثة هنا مؤقتة داخل Session للزائر.
+    """
+
+    if request.method == "POST":
+        message_text = (
+            request.POST.get("message")
+            or ""
+        ).strip()
+
+        if not message_text:
+            messages.error(
+                request,
+                "اكتبي سؤالك الأول."
+            )
+            return redirect("platform_ai")
+
+        try:
+            client = OpenAI(
+                api_key=settings.OPENAI_API_KEY
+            )
+
+            system_instructions = """
+أنتِ "مساعد المنصة" الذكي.
+
+مهمتك مساعدة الزائر أو الطالب في فهم واستخدام المنصة التعليمية.
+
+يمكنك المساعدة في:
+- إنشاء حساب جديد.
+- تسجيل الدخول.
+- مشاكل التسجيل.
+- مشاكل رقم الهاتف.
+- نسيان كلمة المرور.
+- الاشتراكات.
+- الدفع وإرسال إثبات الدفع.
+- ظهور المواد أو المهارات.
+- الوصول للحصص والفيديوهات.
+- الواجبات والامتحانات والنتائج.
+- شرح طريقة استخدام المنصة.
+
+قواعد مهمة:
+- تحدثي بالعربية بأسلوب بسيط وودود.
+- استخدمي اللهجة المصرية الخفيفة عند الحاجة.
+- لا تطلبي من المستخدم إرسال كلمة المرور.
+- لا تغيري كلمة المرور اعتمادًا على رقم الهاتف فقط.
+- تغيير كلمة المرور يحتاج إلى تحقق آمن.
+- إذا كان السؤال عن شرح محتوى درس معين، وجهي الطالب إلى "اسأل مدرس".
+- لا تدّعي تنفيذ شيء لا تستطيعين تنفيذه.
+"""
+
+            response = client.responses.create(
+                model="gpt-5.6-luna",
+                instructions=system_instructions,
+                input=message_text,
+            )
+
+            ai_text = (
+                getattr(
+                    response,
+                    "output_text",
+                    None,
+                )
+                or "معلش، مقدرتش أطلع رد دلوقتي."
+            )
+
+        except Exception:
+            ai_text = (
+                "معلش، حصلت مشكلة مؤقتة في المساعد. "
+                "جربي تاني بعد شوية."
+            )
+
+        request.session[
+            "platform_ai_question"
+        ] = message_text
+
+        request.session[
+            "platform_ai_answer"
+        ] = ai_text
+
+        return redirect("platform_ai")
+
+    return render(
+        request,
+        "main/platform_ai.html",
+        {
+            "question": request.session.get(
+                "platform_ai_question",
+                ""
+            ),
+            "answer": request.session.get(
+                "platform_ai_answer",
+                ""
+            ),
+        },
+    )
+
+
+# =========================================================
+# استعادة كلمة المرور
+# =========================================================
+
+def password_reset_request(request):
+    """
+    استعادة كلمة المرور بشكل آمن:
+
+    1. الطالب يدخل رقم الهاتف.
+    2. لو الحساب لديه بريد إلكتروني مسجل:
+       يتم إنشاء OTP وإرساله إلى البريد.
+    3. الطالب يدخل OTP.
+    4. بعد نجاح التحقق يسمح له بإدخال كلمة مرور جديدة.
+    5. يتم تغيير كلمة المرور باستخدام set_password().
+    """
+
+    # -----------------------------------------------------
+    # تحديد الخطوة الحالية
+    # -----------------------------------------------------
+
+    verified = bool(
+        request.session.get(
+            "password_reset_verified",
+            False,
+        )
+    )
+
+    student_id = request.session.get(
+        "password_reset_student_id"
+    )
+
+    student = None
+
+    if student_id:
+        student = (
+            Student.objects
+            .filter(
+                id=student_id
+            )
+            .select_related("user")
+            .first()
+        )
+
+    # -----------------------------------------------------
+    # POST
+    # -----------------------------------------------------
+
+    if request.method == "POST":
+
+        action = (
+            request.POST.get(
+                "action",
+                "send_code",
+            )
+            or "send_code"
+        ).strip()
+
+        # =================================================
+        # الخطوة 1: إرسال كود OTP
+        # =================================================
+
+        if action == "send_code":
+
+            student_phone = (
+                request.POST.get(
+                    "student_phone"
+                )
+                or ""
+            ).strip()
+
+            if not student_phone:
+                messages.error(
+                    request,
+                    "اكتبي رقم الهاتف."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            student = (
+                Student.objects
+                .filter(
+                    student_phone=student_phone
+                )
+                .select_related("user")
+                .first()
+            )
+
+            # لا نكشف هل الرقم موجود أم لا
+            if not student:
+                messages.success(
+                    request,
+                    "لو الرقم مسجل على المنصة، هتوصلك خطوات استعادة كلمة المرور على البريد الإلكتروني المسجل."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # لو لا يوجد بريد إلكتروني
+            if not student.email:
+                messages.success(
+                    request,
+                    "لو الرقم مسجل على المنصة، هتوصلك خطوات استعادة كلمة المرور على البريد الإلكتروني المسجل."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # منع طلب أكواد متتالية بسرعة
+            # -------------------------------------------------
+
+            sent_at = request.session.get(
+                "password_reset_sent_at"
+            )
+
+            if sent_at:
+
+                try:
+                    elapsed = (
+                        timezone.now().timestamp()
+                        - float(sent_at)
+                    )
+
+                    if (
+                        elapsed
+                        < PASSWORD_RESET_RESEND_SECONDS
+                    ):
+                        remaining_seconds = max(
+                            1,
+                            int(
+                                PASSWORD_RESET_RESEND_SECONDS
+                                - elapsed
+                            )
+                        )
+
+                        messages.error(
+                            request,
+                            (
+                                "استني شوية قبل طلب كود جديد. "
+                                f"جربي بعد {remaining_seconds} ثانية."
+                            ),
+                        )
+
+                        return redirect(
+                            "password_reset_request"
+                        )
+
+                except (
+                    ValueError,
+                    TypeError,
+                ):
+                    pass
+
+            # -------------------------------------------------
+            # إنشاء OTP آمن
+            # -------------------------------------------------
+
+            code = str(
+                secrets.randbelow(900000)
+                + 100000
+            )
+
+            # إلغاء أي أكواد قديمة غير مستخدمة
+            PasswordResetOTP.objects.filter(
+                student=student,
+                is_used=False,
+            ).update(
+                is_used=True
+            )
+
+            otp = PasswordResetOTP.objects.create(
+                student=student,
+                code=code,
+                expires_at=(
+                    timezone.now()
+                    + timedelta(
+                        minutes=PASSWORD_RESET_CODE_MINUTES
+                    )
+                ),
+            )
+
+            # حفظ الطالب في Session
+            request.session[
+                "password_reset_student_id"
+            ] = student.id
+
+            request.session[
+                "password_reset_verified"
+            ] = False
+
+            request.session[
+                "password_reset_sent_at"
+            ] = timezone.now().timestamp()
+
+            # -------------------------------------------------
+            # إرسال البريد
+            # -------------------------------------------------
+
+            email_subject = (
+                "كود استعادة كلمة المرور - منصة سما"
+            )
+
+            email_message = f"""
+مرحبًا {student.student_name or "عزيزتي الطالبة"}،
+
+تم طلب استعادة كلمة المرور لحسابك في منصة سما التعليمية.
+
+كود التحقق الخاص بك هو:
+
+{code}
+
+الكود صالح لمدة {PASSWORD_RESET_CODE_MINUTES} دقائق فقط.
+
+إذا لم تطلبي استعادة كلمة المرور، يمكنك تجاهل هذه الرسالة.
+
+منصة سما التعليمية
+"""
+
+            try:
+
+                send_mail(
+                    email_subject,
+                    email_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [student.email],
+                    fail_silently=False,
+                )
+
+            except Exception as exc:
+
+                print(
+                    "Password reset email error:",
+                    exc,
+                )
+
+                # إلغاء الكود إذا فشل إرسال البريد
+                otp.is_used = True
+
+                otp.save(
+                    update_fields=[
+                        "is_used"
+                    ]
+                )
+
+                request.session.pop(
+                    "password_reset_student_id",
+                    None,
+                )
+
+                request.session.pop(
+                    "password_reset_verified",
+                    None,
+                )
+
+                request.session.pop(
+                    "password_reset_sent_at",
+                    None,
+                )
+
+                messages.error(
+                    request,
+                    (
+                        "حصلت مشكلة أثناء إرسال كود التحقق. "
+                        "جربي مرة تانية بعد شوية."
+                    ),
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            messages.success(
+                request,
+                (
+                    "تم إرسال كود التحقق على البريد الإلكتروني "
+                    f"{mask_email(student.email)}."
+                ),
+            )
+
+            return redirect(
+                "password_reset_request"
+            )
+
+        # =================================================
+        # الخطوة 2: التحقق من OTP
+        # =================================================
+
+        elif action == "verify_code":
+
+            student_id = request.session.get(
+                "password_reset_student_id"
+            )
+
+            if not student_id:
+                messages.error(
+                    request,
+                    "ابدئي استعادة كلمة المرور من جديد."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            student = (
+                Student.objects
+                .filter(
+                    id=student_id
+                )
+                .select_related("user")
+                .first()
+            )
+
+            if not student:
+                clear_password_reset_session(
+                    request
+                )
+
+                messages.error(
+                    request,
+                    "حدث خطأ. ابدئي الاستعادة من جديد."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            entered_code = (
+                request.POST.get(
+                    "code",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            if not entered_code:
+                messages.error(
+                    request,
+                    "اكتبي كود التحقق."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            otp = (
+                PasswordResetOTP.objects
+                .filter(
+                    student=student,
+                    is_used=False,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+
+            if not otp:
+                messages.error(
+                    request,
+                    "كود التحقق غير موجود. اطلبي كودًا جديدًا."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # انتهاء الصلاحية
+            # -------------------------------------------------
+
+            if otp.is_expired:
+
+                otp.is_used = True
+
+                otp.save(
+                    update_fields=[
+                        "is_used"
+                    ]
+                )
+
+                messages.error(
+                    request,
+                    "انتهت صلاحية الكود. اطلبي كودًا جديدًا."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # عدد المحاولات
+            # -------------------------------------------------
+
+            if (
+                otp.attempts
+                >= PASSWORD_RESET_MAX_ATTEMPTS
+            ):
+
+                otp.is_used = True
+
+                otp.save(
+                    update_fields=[
+                        "is_used"
+                    ]
+                )
+
+                messages.error(
+                    request,
+                    "تم تجاوز عدد المحاولات المسموح بها. اطلبي كودًا جديدًا."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # زيادة عدد المحاولات
+            # -------------------------------------------------
+
+            otp.attempts += 1
+
+            otp.save(
+                update_fields=[
+                    "attempts"
+                ]
+            )
+
+            # -------------------------------------------------
+            # مقارنة الكود
+            # -------------------------------------------------
+
+            if entered_code != otp.code:
+
+                remaining_attempts = max(
+                    PASSWORD_RESET_MAX_ATTEMPTS
+                    - otp.attempts,
+                    0,
+                )
+
+                if remaining_attempts > 0:
+                    messages.error(
+                        request,
+                        (
+                            "كود التحقق غير صحيح. "
+                            f"متبقي {remaining_attempts} محاولات."
+                        ),
+                    )
+
+                else:
+                    otp.is_used = True
+
+                    otp.save(
+                        update_fields=[
+                            "is_used"
+                        ]
+                    )
+
+                    messages.error(
+                        request,
+                        "تم تجاوز عدد المحاولات. اطلبي كودًا جديدًا."
+                    )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # الكود صحيح
+            # -------------------------------------------------
+
+            otp.is_used = True
+
+            otp.save(
+                update_fields=[
+                    "is_used"
+                ]
+            )
+
+            request.session[
+                "password_reset_verified"
+            ] = True
+
+            messages.success(
+                request,
+                "تم التحقق من الكود بنجاح ✅ دلوقتي اكتبي كلمة المرور الجديدة."
+            )
+
+            return redirect(
+                "password_reset_request"
+            )
+
+        # =================================================
+        # الخطوة 3: تغيير كلمة المرور
+        # =================================================
+
+        elif action == "set_password":
+
+            student_id = request.session.get(
+                "password_reset_student_id"
+            )
+
+            verified = bool(
+                request.session.get(
+                    "password_reset_verified",
+                    False,
+                )
+            )
+
+            if (
+                not student_id
+                or not verified
+            ):
+                clear_password_reset_session(
+                    request
+                )
+
+                messages.error(
+                    request,
+                    "لازم تتحققي من كود الاستعادة الأول."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            student = (
+                Student.objects
+                .filter(
+                    id=student_id
+                )
+                .select_related("user")
+                .first()
+            )
+
+            if not student or not student.user:
+                clear_password_reset_session(
+                    request
+                )
+
+                messages.error(
+                    request,
+                    "حدث خطأ في الحساب. تواصلي مع الإدارة."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            new_password = (
+                request.POST.get(
+                    "new_password",
+                    "",
+                )
+                or ""
+            )
+
+            confirm_password = (
+                request.POST.get(
+                    "confirm_password",
+                    "",
+                )
+                or ""
+            )
+
+            if not new_password:
+                messages.error(
+                    request,
+                    "اكتبي كلمة المرور الجديدة."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            if new_password != confirm_password:
+                messages.error(
+                    request,
+                    "كلمتا المرور غير متطابقتين."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            if len(new_password) < 6:
+                messages.error(
+                    request,
+                    "كلمة المرور يجب أن تكون 6 أحرف أو أرقام على الأقل."
+                )
+
+                return redirect(
+                    "password_reset_request"
+                )
+
+            # -------------------------------------------------
+            # تغيير كلمة المرور بشكل آمن
+            # -------------------------------------------------
+
+            student.user.set_password(
+                new_password
+            )
+
+            student.user.save(
+                update_fields=[
+                    "password"
+                ]
+            )
+
+            clear_password_reset_session(
+                request
+            )
+
+            messages.success(
+                request,
+                "تم تغيير كلمة المرور بنجاح ✅ تقدري تسجلي دخولك دلوقتي."
+            )
+
+            return redirect(
+                "old_student"
+            )
+
+        else:
+
+            messages.error(
+                request,
+                "طلب غير صحيح."
+            )
+
+            return redirect(
+                "password_reset_request"
+            )
+
+    # =====================================================
+    # GET
+    # =====================================================
+
+    student_id = request.session.get(
+        "password_reset_student_id"
+    )
+
+    verified = bool(
+        request.session.get(
+            "password_reset_verified",
+            False,
+        )
+    )
+
+    student = None
+
+    if student_id:
+        student = (
+            Student.objects
+            .filter(
+                id=student_id
+            )
+            .select_related("user")
+            .first()
+        )
+
+    if verified and not student:
+        clear_password_reset_session(
+            request
+        )
+        verified = False
+
+    if verified:
+        step = "password"
+
+    elif student_id and student:
+        step = "otp"
+
+    else:
+        step = "phone"
+
+    return render(
+        request,
+        "main/password_reset_request.html",
+        {
+            "step": step,
+            "student": student,
+            "masked_email": (
+                mask_email(student.email)
+                if student
+                else ""
+            ),
+            "password_reset_verified": verified,
         },
     )
